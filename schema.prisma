@@ -1,0 +1,572 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+  }
+
+model State {
+  id        Int      @id @default(autoincrement())
+  name      String
+  cities    City[]
+  properties Property[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model City {
+  id        Int       @id @default(autoincrement())
+  name      String
+  stateId   Int
+  state     State     @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  districts District[]
+  properties Property[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model District {
+  id        Int       @id @default(autoincrement())
+  name      String
+  cityId    Int
+  city      City      @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  neighbours Neighbour[]
+  properties Property[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Neighbour {
+  id        Int       @id @default(autoincrement())
+  name      String
+  districtId Int
+  district  District  @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  properties Property[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PropertyType {
+  id        Int       @id @default(autoincrement())
+  name      String
+  properties Property[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UnitType {
+  id        Int      @id @default(autoincrement())
+  name      String
+  units     Unit[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Property {
+  id                  Int       @id @default(autoincrement())
+  name                String
+  typeId              Int
+  type                PropertyType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  propertyId          String   // معرف العقار
+  voucherNumber       String?   // رقم القسيمة
+  location            String?
+  street              String?   // الشارع
+  stateId             Int
+  state               State    @relation(fields: [stateId], references: [id], onDelete: Restrict)
+  cityId              Int
+  city                City     @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  districtId          Int?
+  district            District? @relation(fields: [districtId], references: [id], onDelete: SetNull)
+  neighbourId         Int?
+  neighbour           Neighbour? @relation(fields: [neighbourId], references: [id], onDelete: SetNull)
+  price               Float    // قيمة العقار
+  dateOfBuilt         DateTime // تاريخ البناء
+  numElevators        Int      // عدد المصاعد
+  numParkingSpaces    Int      // عدد المواقف
+  builtArea           Float    // مسطح البناء
+  buildingGuardName   String
+  buildingGuardPhone  String?
+  buildingGuardId     String?
+  bankId              Int
+  payments            Payment[]
+  bank                Bank     @relation(fields: [bankId], references: [id], onDelete: Restrict, name: "PropertyBank") // Updated relation to Bank
+  bankAccountId       Int?
+  bankAccount         BankAccount?       @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  managementCommission Float
+  plateNumber         String
+  clientId            Int
+  client              Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  collectorId         Int?
+  collector           Collector? @relation(fields: [collectorId], references: [id], onDelete: SetNull)
+  deletedAt           DateTime?
+  attachments         Attachment[]
+  incomes             Income[]
+  expenses            Expense[]
+  invoices            Invoice[]
+  units               Unit[]
+  maintenances        Maintenance[]
+  electricityMeters   ElectricityMeter[] // Relation to the new ElectricityMeter model
+  users               UserProperty[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model ElectricityMeter {
+  id          Int      @id @default(autoincrement())
+  meterId     String   // Unique ID for the meter
+  name        String   // Name of the meter
+  propertyId  Int
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Attachment {
+  id         Int      @id @default(autoincrement())
+  url        String?
+  propertyId Int?
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  rentAgreementId Int?
+  rentAgreement RentAgreement? @relation(fields: [rentAgreementId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Unit {
+  id               Int       @id @default(autoincrement())
+  number           String?    // رقم الوحدة
+  yearlyRentPrice  Float?     // سعر الإيجار السنوي
+  electricityMeter String?    // رقم عداد الكهرباء
+  numBedrooms      Int?       // عدد غرف النوم
+  floor            Int       // الدور
+  numBathrooms     Int?       // عدد الحمامات
+  numACs           Int?       // عدد مكيف
+  numLivingRooms   Int?       // عدد غرف الجلوس
+  numKitchens      Int?       // عدد المطابخ
+  numSaloons       Int?       // عدد الصالة
+  unitId           String?    // معرف الوحده
+  maintenances      Maintenance[]
+  payments          Payment[]
+  notes            String?
+  typeId           Int?
+  type             UnitType?  @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  propertyId       Int
+  property         Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  clientId         Int?      // Optional reference to Client
+  client           Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  rentAgreements   RentAgreement[]
+  deletedAt        DateTime? // null means the unit is not deleted
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+
+model ContractExpense {
+  id             Int             @id @default(autoincrement())
+  name           String
+  value          Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  rentAgreements ContractExpenseToRentAgreement[] @relation("ContractExpenseToRentAgreementToContractExpense")
+}
+
+model RentAgreement {
+  id                     Int    @id @default(autoincrement())
+  rentAgreementNumber    String
+  startDate              DateTime
+  endDate                DateTime
+  typeId                 Int?
+  type                   RentAgreementType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  renterId               Int
+  renter                 Client @relation("Renter", fields: [renterId], references: [id], onDelete: Cascade)
+  tax                    Int?
+  registrationFees       Int?
+  insuranceFees          Int?
+  unitId                 Int
+  unit                   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  totalPrice             Float
+  totalContractPrice     Float?
+  rentCollectionType     RentCollectionType
+  installments           Installment[]
+  status                 RentAgreementStatus @default(ACTIVE)
+  invoices               Invoice[] // Only invoices related to this RentAgreement
+  attachments         Attachment[]
+  customDescription      Json?
+  contractExpenses ContractExpenseToRentAgreement[] @relation("ContractExpenseToRentAgreementToRentAgreement")
+  payments            Payment[] // New relation to Payment
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+}
+enum RentAgreementStatus {
+  CANCELED
+  EXPIRED
+  ACTIVE
+}
+
+model ContractExpenseToRentAgreement {
+  id                Int             @id @default(autoincrement())
+  contractExpenseId Int
+  rentAgreementId   Int
+  contractExpense   ContractExpense @relation("ContractExpenseToRentAgreementToContractExpense", fields: [contractExpenseId], references: [id])
+  rentAgreement     RentAgreement   @relation("ContractExpenseToRentAgreementToRentAgreement", fields: [rentAgreementId], references: [id])
+  payments            Payment[]
+  invoices            Invoice[]
+  paidAmount    Float @default(0) // New field to track paid amount
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model RentAgreementType {
+  id             Int             @id @default(autoincrement())
+  title          String
+  description    Json            // Use JSON to store multi-page descriptions
+  rentAgreements RentAgreement[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum RentCollectionType {
+  TWO_MONTHS
+  THREE_MONTHS
+  FOUR_MONTHS
+  SIX_MONTHS
+  ONE_YEAR
+}
+
+model Installment {
+  id            Int       @id @default(autoincrement())
+  startDate     DateTime
+  endDate       DateTime
+  status        Boolean
+  type          PaymentTypeMethod?
+  bankId        Int?
+  bank          Bank?  @relation(fields: [bankId], references: [id], onDelete: SetNull)
+  rentAgreementId Int
+  rentAgreement RentAgreement @relation(fields: [rentAgreementId], references: [id], onDelete: Cascade)
+  invoices      Invoice[]
+  payments      Payment[] // New relation to Payment
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+model MaintenanceInstallment {
+  id            Int    @id @default(autoincrement())
+  amount        Float
+  date          DateTime
+  startDate     DateTime
+  endDate       DateTime
+  status        Boolean
+  type          PaymentTypeMethod?
+  bankId        Int?
+  bank          Bank?  @relation(fields: [bankId], references: [id], onDelete: SetNull)
+  maintenanceId Int
+  maintenance   Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  invoices      Invoice[]
+  payments      Payment[] // New relation to Payment
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum PaymentTypeMethod {
+  CASH
+  BANK
+  CHEQUE
+}
+
+model Maintenance {
+  id             Int    @id @default(autoincrement())
+  description    String
+  cost           Float
+  date           DateTime
+  propertyId     Int
+  property       Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownerId       Int?
+  client         Client? @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  unitId         Int?
+  unit           Unit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  typeId         Int
+  type           PropertyExpenseType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  totalPrice     Float
+  payments       Payment[] // New relation to Payment
+  currentStatus  Float @default(0)
+  installments   MaintenanceInstallment[]
+  isPaid         Boolean
+  payEvery       PayEvery? // New field to handle the payment frequency
+  invoices       Invoice[] // Only invoices related to this Maintenance task
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum PayEvery {
+  ONCE
+  ONE_MONTH
+  TWO_MONTHS
+  FOUR_MONTHS
+  SIX_MONTHS
+  ONE_YEAR
+}
+
+
+model PropertyExpenseType {
+  id             Int             @id @default(autoincrement())
+  name           String
+  maintenances   Maintenance[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Bank {
+  id                      Int                      @id @default(autoincrement())
+  name                    String
+  country                 String
+  city                    String
+  installments            Installment[]
+  maintenanceInstallments MaintenanceInstallment[]
+  BankAccounts            BankAccount[]
+  payments                Payment[]
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  properties              Property[] @relation("PropertyBank") // Add this line to maintain a back relation
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  name           String?
+  role           UserRole?
+  phone          String?
+  email          String @unique
+  password       String
+  token          String?
+  resetTokenTime DateTime?
+  resetPasswordToken  String?  @unique
+  resetPasswordExpires DateTime?
+  nationalId     String?
+  privileges     UserPrivilege[]
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+   properties     UserProperty[]
+}
+
+model UserProperty {
+  userId    Int
+  propertyId Int
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  @@id([userId, propertyId]) // Composite primary key to ensure uniqueness
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model Privilege {
+  id               Int      @id @default(autoincrement())
+  name             String
+  canRead          Boolean
+  canWrite         Boolean
+  canDelete        Boolean
+  canEdit          Boolean
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  userPrivileges   UserPrivilege[]
+}
+
+model UserPrivilege {
+  id                       Int        @id @default(autoincrement())
+  userId                   Int
+  user                     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  privilegeId              Int
+  privilege                Privilege  @relation(fields: [privilegeId], references: [id], onDelete: Cascade)
+  area                     PrivilegeArea
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+enum PrivilegeArea {
+    HOME
+    FOLLOW_UP
+    PROPERTY
+    UNIT
+    RENT
+    INVOICE
+    MAINTENANCE
+    REPORT
+    OWNER
+    RENTER
+    SETTING
+}
+model Client {
+  id               Int      @id @default(autoincrement())
+  name             String   // اسم المالك
+  nationalId       String   // هوية المالك
+  phone            String?  // رقم هاتف المالك
+  email            String?  // الايميل (Optional)
+  role                ClientRole
+  properties       Property[]
+  payments      Payment[]
+  maintenances    Maintenance[]
+  rentAgreementsRenter RentAgreement[] @relation("Renter")
+  units            Unit[]  // This now references units correctly
+  bankAccounts     BankAccount[] // Optional relation to BankAccount
+  incomes Income[]
+  expenses Expense[]
+  invoicesAsRenter Invoice[] @relation("RenterToInvoice")
+  invoicesAsOwner  Invoice[] @relation("OwnerToInvoice")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+model BankAccount {
+  id          Int      @id @default(autoincrement())
+  bankId      Int
+  bank        Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  accountName String?
+  accountNumber String?
+  properties     Property[]
+  clientId    Int
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoices    Invoice[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+enum ClientRole {
+  OWNER
+  RENTER
+}
+
+model Contact {
+  id                      Int    @id @default(autoincrement())
+  name                    String
+  phone                   String
+  description             String
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model Income {
+  id          Int       @id @default(autoincrement())
+  amount      Float
+  date        DateTime
+  description String
+  clientId    Int
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  propertyId  Int
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  invoiceId   Int
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Expense {
+  id          Int       @id @default(autoincrement())
+  amount      Float
+  date        DateTime
+  description String
+  propertyId  Int
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  clientId    Int
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoiceId   Int
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Collector {
+  id                      Int        @id @default(autoincrement())
+  name                    String
+  phone                   String?
+  nationalId              String?
+  email                   String?
+  properties              Property[]
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+model Payment {
+  id            Int       @id @default(autoincrement())
+  amount        Float
+  paidAmount    Float @default(0) // New field to track paid amount
+  dueDate       DateTime
+  installmentId Int?
+  timeOfPayment     DateTime @default(now())
+  paymentTypeMethod   PaymentTypeMethod?
+  chequeNumber        String?
+  installment   Installment? @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+  maintenanceInstallmentId Int?
+  maintenanceInstallment MaintenanceInstallment? @relation(fields: [maintenanceInstallmentId], references: [id], onDelete: SetNull)
+  title         String?
+  bankId        Int?
+  bank          Bank?  @relation(fields: [bankId], references: [id], onDelete: SetNull)
+  status            PaymentStatus
+  propertyId    Int?
+  property      Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  clientId      Int?
+  client        Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  unitId        Int?
+  unit          Unit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  invoices      Invoice[]
+  maintenanceId Int?
+  maintenance   Maintenance? @relation(fields: [maintenanceId], references: [id], onDelete: SetNull)
+  rentAgreementId Int?
+  rentAgreement RentAgreement? @relation(fields: [rentAgreementId], references: [id], onDelete: SetNull)
+  contractExpenseId Int?
+  contractExpense ContractExpenseToRentAgreement? @relation(fields: [contractExpenseId], references: [id], onDelete: SetNull)
+  paymentType       PaymentType?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Invoice {
+  id                Int      @id @default(autoincrement())
+  amount            Float
+  description       String
+  title             String?
+  paymentTypeMethod   PaymentTypeMethod?
+  invoiceType PaymentType
+  bankAccountId         Int?
+  bankAccount       BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  chequeNumber        String?
+  propertyId        Int?
+  property          Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  renterId          Int?
+  renter            Client? @relation("RenterToInvoice", fields: [renterId], references: [id], onDelete: Cascade)
+  ownerId           Int?
+  owner             Client? @relation("OwnerToInvoice", fields: [ownerId], references: [id], onDelete: Cascade)
+  rentAgreementId   Int?
+  rentAgreement     RentAgreement? @relation(fields: [rentAgreementId], references: [id], onDelete: SetNull)
+  installmentId     Int?
+  installment       Installment? @relation(fields: [installmentId], references: [id], onDelete: SetNull)
+  maintenanceId     Int?
+  maintenance       Maintenance? @relation(fields: [maintenanceId], references: [id], onDelete: SetNull)
+  maintenanceInstallmentId Int?
+  maintenanceInstallment MaintenanceInstallment? @relation(fields: [maintenanceInstallmentId], references: [id], onDelete: SetNull)
+  contractExpenseId Int?
+  contractExpense   ContractExpenseToRentAgreement? @relation(fields: [contractExpenseId], references: [id], onDelete: SetNull)
+  paymentId         Int?
+  payment           Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  incomes           Income[]
+  expenses          Expense[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+enum PaymentType {
+  RENT
+  TAX
+  INSURANCE
+  REGISTRATION
+  MAINTENANCE
+  CONTRACT_EXPENSE
+  OTHER_EXPENSE
+  OTHER
+}
