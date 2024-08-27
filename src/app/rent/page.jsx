@@ -7,14 +7,14 @@ import {useEffect, useState} from "react";
 import {rentAgreementInputs} from "./rentInputs";
 import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
 import {submitRentAgreement} from "@/services/client/createRentAgreement";
-import {RenewRentModal} from "@/app/UiComponents/Modals/RenewRent"; // Import the RenewRentModal
+import {RenewRentModal} from "@/app/UiComponents/Modals/RenewRent";
 import {CancelRentModal} from "@/app/UiComponents/Modals/CancelRentModal";
 import {Box, Button, FormControl, Select, Typography} from "@mui/material";
 import Link from "next/link";
 import {StatusType} from "@/app/constants/Enums";
 import MenuItem from "@mui/material/MenuItem";
 import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
-import dayjs from "dayjs"; // Import the CancelRentModal
+import dayjs from "dayjs";
 import "dayjs/locale/en-gb";
 
 export default function RentPage({searchParams}) {

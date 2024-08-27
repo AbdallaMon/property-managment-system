@@ -1,8 +1,8 @@
 import {createHandler} from "@/app/api/handler";
-import {getTotalIncome} from "@/services/server/home";
+import {getUnitsReports} from "@/services/server/reports";
 
 const handler = createHandler({
-    getService: getTotalIncome,
+    getService: getUnitsReports,
 });
 
 export const GET = handler.GET;

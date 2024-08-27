@@ -39,6 +39,7 @@ export async function POST(request) {
                 message: "كلمة المرور غير صحيحة",
             });
         }
+        console.log(user.properties, "properties")
         const token = jwt.sign({
             userId: user.id,
             role: user.role,

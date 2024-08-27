@@ -1,4 +1,5 @@
-import prisma from "@/lib/prisma"; // Adjust the path to your Prisma instance
+import prisma from "@/lib/prisma";
+import {updateWhereClauseWithUserProperties} from "@/app/api/utlis/userProperties";
 
 async function getCitiesByStateId(searchParams) {
     try {
@@ -172,6 +173,22 @@ async function getOwners() {
     }
 }
 
+async function getOwnersByProperty() {
+    try {
+        let where = {role: "OWNER"}
+        let some = {}
+        some = await updateWhereClauseWithUserProperties("id", some)
+        where.properties = {some};
+        const owners = await prisma.client.findMany({
+            where
+        });
+        return owners;
+    } catch (error) {
+        console.error("Error fetching owners:", error);
+        throw error;
+    }
+}
+
 async function createRenter(data) {
     try {
         const renter = await prisma.client.create({
@@ -251,7 +268,10 @@ async function getUnitTypes() {
 
 async function getProperties() {
     try {
+        let where = {};
+        where = await updateWhereClauseWithUserProperties("id", where)
         const properties = await prisma.property.findMany({
+            where,
             select: {
                 id: true,
                 name: true,
@@ -269,11 +289,15 @@ async function getProperties() {
     }
 }
 
+
 async function getUnits(searchParams) {
     const propertyId = searchParams.get("propertyId");
     let whereClause = {};
     if (propertyId) {
         whereClause.propertyId = +propertyId;
+    }
+    if (!propertyId || propertyId === "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause)
     }
     try {
         const units = await prisma.unit.findMany({
@@ -436,5 +460,5 @@ export {
     createRentType,
     getContractExpenses,
     createContractExpense,
-    getExpenseTypes,
+    getExpenseTypes, getOwnersByProperty
 };

@@ -46,28 +46,37 @@ function AssignPropertiesModal({user, open, setOpen, setUserId, setData}) {
     const [loading, setLoading] = useState(true);
     const [userProperties, setUserProperties] = useState(user.properties);
     const {setLoading: setSubmitLoading} = useToastContext()
-    useEffect(() => {
-        async function getProperties() {
-            setLoading(true);
+
+    async function getProperties(withoutFetch) {
+        setLoading(true);
+        let response = [...properties, ...userProperties]
+        if (!withoutFetch) {
             const request = await fetch("/api/fast-handler?id=properties");
-            const response = await request.json();
-
-            if (userProperties) {
-                const userProps = response.filter((prop) =>
-                      userProperties.some(userProp => userProp.propertyId === prop.id)
-                );
-
-                const filteredProps = response.filter((prop) =>
-                      !userProperties.some(userProp => userProp.propertyId === prop.id)
-                );
-                setUserProperties(userProps);
-                setProperties(filteredProps);
-            } else {
-                setProperties(response);
-            }
-            setLoading(false);
+            response = await request.json();
         }
 
+        if (userProperties) {
+            const userProps = response.filter((prop) =>
+                  user.properties.some(userProp => userProp.propertyId === prop.id)
+            );
+
+            const filteredProps = response.filter((prop) =>
+                  !user.properties.some(userProp => userProp.propertyId === prop.id)
+            );
+            setUserProperties(userProps);
+            setProperties(filteredProps);
+        } else {
+            setProperties(response);
+        }
+        setLoading(false);
+    }
+
+    useEffect(() => {
+        if (properties && userProperties) {
+            getProperties(true)
+        }
+    }, [user])
+    useEffect(() => {
         getProperties();
     }, []);
 
@@ -114,7 +123,9 @@ function AssignPropertiesModal({user, open, setOpen, setUserId, setData}) {
                   </Box>
               </DialogTitle>
 
-              <DialogContent>
+              <DialogContent sx={{
+                  height: "60vh"
+              }}>
                   <PropertiesSelect
                         loading={loading}
                         properties={properties}

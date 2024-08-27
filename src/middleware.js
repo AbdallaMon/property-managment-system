@@ -8,6 +8,17 @@ export async function middleware(request) {
     try {
         const SECRET_KEY = new TextEncoder().encode(process.env.SECRET_KEY);
         const cookieStore = cookies();
+
+        const token = cookieStore.get("token")?.value;
+
+        if (!token) {
+            throw new Error("No token provided")
+        }
+
+        const {payload} = await jwtVerify(token, SECRET_KEY);
+        if (!payload) {
+            throw new Error("error")
+        }
         const currentPath = request.nextUrl.pathname;
         if (currentPath.startsWith("/api/main/properties")) {
             const pathSegments = currentPath.split('/');
@@ -19,24 +30,13 @@ export async function middleware(request) {
                 }
             }
             if (id) {
-
                 const isAllowed = await checkIfIdAllowed(+id)
-
                 if (!isAllowed) throw new Error("No Allowed ")
             }
         }
-        const token = cookieStore.get("token")?.value;
-
-        if (!token) {
-            throw new Error("No token provided")
-        }
-
-        const {payload} = await jwtVerify(token, SECRET_KEY);
-        if (!payload) {
-            throw new Error("error")
-        }
         return NextResponse.next();
     } catch (error) {
+        console.log(error.message, "error in middleware")
         return NextResponse.redirect(new URL('/api/unauthorized', request.url));
 
     }

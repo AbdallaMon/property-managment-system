@@ -1,26 +1,27 @@
 import prisma from "@/lib/prisma";
+import {updateWhereClauseWithUserProperties} from "@/app/api/utlis/userProperties";
 
-export async function getTotalExpenses(page, limit, searchParams) {
-    const propertyId = searchParams.get("propertyId");
-
-    const whereClause = {};
-    if (propertyId && propertyId !== "all") {
-        whereClause.propertyId = parseInt(propertyId, 10);
-    }
-
-    const expenses = await prisma.expense.findMany({where: whereClause});
-
-    const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-
-    return {
-        data: total,
-    };
-}
+// export async function getTotalExpenses(page, limit, searchParams) {
+//     const propertyId = searchParams.get("propertyId");
+//
+//     const whereClause = {};
+//     if (propertyId && propertyId !== "all") {
+//         whereClause.propertyId = parseInt(propertyId, 10);
+//     }
+//
+//     const expenses = await prisma.expense.findMany({where: whereClause});
+//
+//     const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+//
+//     return {
+//         data: total,
+//     };
+// }
 
 export async function getTotalIncome(page, limit, searchParams) {
     const propertyId = searchParams.get("propertyId");
 
-    const whereClause = {
+    let whereClause = {
         invoice: {
             rentAgreement: {
                 status: "ACTIVE",
@@ -29,6 +30,9 @@ export async function getTotalIncome(page, limit, searchParams) {
     };
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
+    }
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
 
     const income = await prisma.income.findMany({where: whereClause});
@@ -39,69 +43,69 @@ export async function getTotalIncome(page, limit, searchParams) {
     };
 }
 
-export async function getIncome(page, limit, searchParams, params) {
-    const currentMonthStart = new Date(
-          new Date().getFullYear(),
-          new Date().getMonth(),
-          1,
-    );
-    const propertyId = searchParams.get("propertyId");
-    const currentMonthEnd = new Date(
-          new Date().getFullYear(),
-          new Date().getMonth() + 1,
-          0,
-    );
-    const whereClause = {
-        invoice: {
-            rentAgreement: {
-                status: "ACTIVE",
-            },
-        },
-        createdAt: {
-            gte: currentMonthStart,
-            lte: currentMonthEnd,
-        },
-    };
+// export async function getIncome(page, limit, searchParams, params) {
+//     const currentMonthStart = new Date(
+//           new Date().getFullYear(),
+//           new Date().getMonth(),
+//           1,
+//     );
+//     const propertyId = searchParams.get("propertyId");
+//     const currentMonthEnd = new Date(
+//           new Date().getFullYear(),
+//           new Date().getMonth() + 1,
+//           0,
+//     );
+//     const whereClause = {
+//         invoice: {
+//             rentAgreement: {
+//                 status: "ACTIVE",
+//             },
+//         },
+//         createdAt: {
+//             gte: currentMonthStart,
+//             lte: currentMonthEnd,
+//         },
+//     };
+//
+//     if (propertyId && propertyId !== "all") {
+//         whereClause.propertyId = parseInt(propertyId, 10);
+//     }
+//     console.log(whereClause, "whereCaluse")
+//     const income = await prisma.income.findMany({where: whereClause});
+//     return {
+//         data: income,
+//
+//     };
+// }
 
-    if (propertyId && propertyId !== "all") {
-        whereClause.propertyId = parseInt(propertyId, 10);
-    }
-    console.log(whereClause, "whereCaluse")
-    const income = await prisma.income.findMany({where: whereClause});
-    return {
-        data: income,
-
-    };
-}
-
-export async function getExpenses(page, limit, searchParams, params) {
-    const propertyId = searchParams.get("propertyId");
-    const currentMonthStart = new Date(
-          new Date().getFullYear(),
-          new Date().getMonth(),
-          1, // First day of the current month
-    );
-    const currentMonthEnd = new Date(
-          new Date().getFullYear(),
-          new Date().getMonth() + 1,
-          0, // Last day of the current month
-    );
-
-    const whereClause = {
-        createdAt: {
-            gte: currentMonthStart,
-            lte: currentMonthEnd,
-        },
-    };
-    if (propertyId && propertyId !== "all") {
-        whereClause.propertyId = parseInt(propertyId, 10);
-    }
-
-    const expenses = await prisma.expense.findMany({where: whereClause});
-    return {
-        data: expenses,
-    };
-}
+// export async function getExpenses(page, limit, searchParams, params) {
+//     const propertyId = searchParams.get("propertyId");
+//     const currentMonthStart = new Date(
+//           new Date().getFullYear(),
+//           new Date().getMonth(),
+//           1, // First day of the current month
+//     );
+//     const currentMonthEnd = new Date(
+//           new Date().getFullYear(),
+//           new Date().getMonth() + 1,
+//           0, // Last day of the current month
+//     );
+//
+//     const whereClause = {
+//         createdAt: {
+//             gte: currentMonthStart,
+//             lte: currentMonthEnd,
+//         },
+//     };
+//     if (propertyId && propertyId !== "all") {
+//         whereClause.propertyId = parseInt(propertyId, 10);
+//     }
+//
+//     const expenses = await prisma.expense.findMany({where: whereClause});
+//     return {
+//         data: expenses,
+//     };
+// }
 
 export async function getRentedUnits(page, limit, searchParams, params) {
     const propertyId = searchParams.get("propertyId");

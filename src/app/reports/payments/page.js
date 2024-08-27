@@ -165,7 +165,7 @@ const PaymentsReport = () => {
                                               .reduce((acc, part) => acc && acc[part], row);
 
                                         if (col.english.includes("date") || col.english.includes("Date")) {
-                                            cellValue = new Date(cellValue).toLocaleDateString();
+                                            cellValue = dayjs(cellValue).format("DD/MM/YYYY");
                                         } else if (col.english.includes("price") || col.english.includes("amount") || col.english.includes("totalPrice") || col.english.includes("paidAmount") || col.english.includes("yearlyRentPrice")) {
                                             cellValue = formatCurrencyAED(cellValue);
                                         }
@@ -201,7 +201,7 @@ const PaymentsReport = () => {
                                           </TableCell>
                                           <TableCell colSpan={4}>
                                               <Typography variant="body2">
-                                                  {`تم الدفع في: ${new Date(invoice.createdAt).toLocaleDateString()}`}
+                                                  {`تم الدفع في: ${dayjs(invoice.createdAt).format("DD/MM/YYYY")}`}
                                               </Typography>
                                           </TableCell>
                                       </TableRow>

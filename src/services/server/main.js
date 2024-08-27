@@ -1,12 +1,16 @@
 import prisma from "@/lib/prisma";
+import {updateWhereClauseWithUserProperties} from "@/app/api/utlis/userProperties";
 
 export async function getUnits(page, limit, searchParams, params) {
     const propertyId = searchParams.get("propertyId");
 
-    const whereClause = propertyId && propertyId !== "all"
-          ? {propertyId: parseInt(propertyId, 10)}
-          : {};
-
+    let whereClause = {}
+    if (propertyId && propertyId !== "all") {
+        whereClause.propertyId = parseInt(propertyId, 10);
+    }
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
+    }
     const units = await prisma.unit.findMany({
         where: whereClause,
         select: {
@@ -54,9 +58,13 @@ export async function getUnits(page, limit, searchParams, params) {
 export async function getRentAgreements(page, limit, searchParams, params) {
     const propertyId = searchParams.get("propertyId");
 
-    const whereClause = propertyId && propertyId !== "all"
-          ? {propertyId: parseInt(propertyId, 10)}
-          : {};
+    let whereClause = {}
+    if (propertyId && propertyId !== "all") {
+        whereClause.propertyId = parseInt(propertyId, 10);
+    }
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
+    }
 
     // Fetch units with their rent agreements
     let units = await prisma.unit.findMany({
@@ -114,7 +122,7 @@ export async function getRentAgreements(page, limit, searchParams, params) {
 export async function getRentPayments(page, limit, searchParams, params) {
     const propertyId = searchParams.get("propertyId");
 
-    const whereClause = {
+    let whereClause = {
         paymentType: "RENT"
     };
     whereClause.rentAgreement = {
@@ -125,7 +133,9 @@ export async function getRentPayments(page, limit, searchParams, params) {
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
+    }
     const payments = await prisma.payment.findMany({
         where: whereClause,
         select: {
@@ -157,7 +167,7 @@ export async function getCurrentMonthPayments(page, limit, searchParams, params)
     );
 
     const propertyId = searchParams.get("propertyId");
-    const whereClause = {
+    let whereClause = {
         createdAt: {
             gte: currentMonthStart,
             lte: currentMonthEnd
@@ -172,7 +182,9 @@ export async function getCurrentMonthPayments(page, limit, searchParams, params)
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
+    }
     const payments = await prisma.payment.findMany({
         where: whereClause,
         select: {
@@ -194,14 +206,16 @@ export async function getCurrentMonthPayments(page, limit, searchParams, params)
 export async function getMaintenancePayments(page, limit, searchParams, params) {
     const propertyId = searchParams.get("propertyId");
 
-    const whereClause = {
+    let whereClause = {
         paymentType: "MAINTENANCE"
     };
 
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
+    }
     const payments = await prisma.payment.findMany({
         where: whereClause,
         select: {
@@ -233,7 +247,7 @@ export async function getCurrentMonthMaintenancePayments(page, limit, searchPara
     );
 
     const propertyId = searchParams.get("propertyId");
-    const whereClause = {
+    let whereClause = {
         createdAt: {
             gte: currentMonthStart,
             lte: currentMonthEnd
@@ -243,6 +257,9 @@ export async function getCurrentMonthMaintenancePayments(page, limit, searchPara
 
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
+    }
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
 
     const payments = await prisma.payment.findMany({
@@ -266,7 +283,7 @@ export async function getCurrentMonthMaintenancePayments(page, limit, searchPara
 export async function getOtherPayments(page, limit, searchParams, params) {
     const propertyId = searchParams.get("propertyId");
 
-    const whereClause = {
+    let whereClause = {
         NOT: {
             OR: [
                 {paymentType: "RENT"},
@@ -277,6 +294,9 @@ export async function getOtherPayments(page, limit, searchParams, params) {
 
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
+    }
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
     whereClause.rentAgreement = {
         status: "ACTIVE"
@@ -313,7 +333,7 @@ export async function getCurrentMonthOtherPayments(page, limit, searchParams, pa
     );
 
     const propertyId = searchParams.get("propertyId");
-    const whereClause = {
+    let whereClause = {
         createdAt: {
             gte: currentMonthStart,
             lte: currentMonthEnd
@@ -328,6 +348,9 @@ export async function getCurrentMonthOtherPayments(page, limit, searchParams, pa
 
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
+    }
+    if (!propertyId || propertyId !== "all") {
+        whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
     whereClause.rentAgreement = {
         status: "ACTIVE"

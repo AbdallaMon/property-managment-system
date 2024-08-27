@@ -256,6 +256,129 @@ export async function getReports(page, limit, searchParams, params) {
     return {data: reportData};
 }
 
+
+export async function getUnitsReports(page, limit, searchParams) {
+    const filters = searchParams.get("filters")
+          ? JSON.parse(searchParams.get("filters"))
+          : {};
+    const {propertyIds} = filters;
+    const reportData = [];
+
+
+    try {
+        const properties = await prisma.property.findMany({
+            where: {id: {in: propertyIds}},
+            select: {
+                id: true,
+                name: true,
+                builtArea: true,
+                price: true,
+                numElevators: true,
+                numParkingSpaces: true,
+                propertyId: true,
+                client: {
+                    select: {
+                        name: true,
+                        nationalId: true,
+                        email: true,
+                        phone: true,
+                    },
+                },
+                units: {
+                    select: {
+                        id: true,
+                        number: true,
+                        yearlyRentPrice: true,
+                        floor: true,
+                        numBedrooms: true,
+                        numBathrooms: true,
+                        numACs: true,
+                        numLivingRooms: true,
+                        rentAgreements: {
+                            where: {
+                                status: {
+                                    in: ["ACTIVE", "EXPIRED"],
+                                },
+                            },
+                            select: {
+                                renter: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                                id: true,
+                                rentAgreementNumber: true,
+                                startDate: true,
+                                endDate: true,
+                                totalPrice: true,
+                                status: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        reportData.push(
+              ...properties.map((property) => ({
+                  id: property.id,
+                  name: property.name,
+                  client: property.client,
+                  builtArea: property.builtArea,
+                  propertyId: property.propertyId,
+                  price: property.price,
+                  numElevators: property.numElevators,
+                  numParkingSpaces: property.numParkingSpaces,
+                  units: property.units.map((unit) => {
+                      const currentDate = new Date();
+                      let unitStatus = "شاغرة";
+                      const activeAgreement = unit.rentAgreements?.find(
+                            (agreement) => agreement.status === "ACTIVE",
+                      );
+                      if (activeAgreement) {
+                          if (new Date(activeAgreement.endDate) <= currentDate) {
+                              unitStatus = "يجب اتخاذ اجراء";
+                              activeAgreement.renter = activeAgreement.renter.name;
+                          } else {
+                              unitStatus = "مؤجرة";
+                              activeAgreement.renter = activeAgreement.renter.name;
+                          }
+                      } else if (unit.rentAgreements.length > 0) {
+                          unitStatus = "شاغرة";
+                      }
+                      return {
+                          id: unit.id,
+                          number: unit.number,
+                          yearlyRentPrice: unit.yearlyRentPrice,
+                          floor: unit.floor,
+                          numBedrooms: unit.numBedrooms,
+                          numBathrooms: unit.numBathrooms,
+                          numACs: unit.numACs,
+                          numLivingRooms: unit.numLivingRooms,
+                          actualRentPrice: activeAgreement?.totalPrice,
+                          activeAgreement,
+                          status: unitStatus,
+                          rentAgreements: unit.rentAgreements.map((agreement) => ({
+                              id: agreement.id,
+                              rentAgreementNumber: agreement.rentAgreementNumber,
+                              startDate: agreement.startDate,
+                              endDate: agreement.endDate,
+                              totalPrice: agreement.totalPrice,
+                              status: statusTranslations[agreement.status] || agreement.status,
+                              unit: unit.number,
+                          })),
+                      };
+                  }),
+              })),
+        );
+    } catch (error) {
+        console.error("Error fetching property report data", error);
+    }
+
+    return {data: reportData};
+}
+
 export async function getMaintenanceReports(page, limit, searchParams, params) {
     const filters = searchParams.get("filters")
           ? JSON.parse(searchParams.get("filters"))

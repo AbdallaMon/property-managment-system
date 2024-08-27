@@ -17,6 +17,7 @@ export async function updateWhereClauseWithUserProperties(key, where) {
         properties.forEach((prop) => {
             propertyIds.push(prop.propertyId)
         })
+
         where[key] = {in: propertyIds}
     }
     return where
