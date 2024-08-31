@@ -13,6 +13,9 @@ import dayjs from "dayjs";
 import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
 import {RenewRentModal} from "@/app/UiComponents/Modals/RenewRent";
 import {CancelRentModal} from "@/app/UiComponents/Modals/CancelRentModal";
+import {getCurrentPrivilege} from "@/helpers/functions/getUserPrivilege";
+import {useAuth} from "@/app/context/AuthProvider/AuthProvider";
+import {usePathname} from "next/navigation";
 
 export default function EndingRents() {
     return (
@@ -43,6 +46,8 @@ function RentWrapper() {
     const [renewData, setRenewData] = useState(null);
     const [cancelData, setCancelData] = useState(null);
 
+    const {user} = useAuth();
+    const pathName = usePathname();
 
     async function getRenters() {
         const res = await fetch("/api/fast-handler?id=renter");
@@ -172,13 +177,20 @@ function RentWrapper() {
                   },
               ],
         );
-        console.log("we are here what is wrong?")
         const newData = expiredData.filter((item) => {
             return +item.id !== +renewData.id;
         });
         setExpiredData(newData);
         handleCloseRenewModal();
     };
+
+
+    function canEdit() {
+        const currentPrivilege = getCurrentPrivilege(user, pathName);
+        return currentPrivilege?.privilege.canEdit;
+    }
+
+
     const columns = [
         {
             field: "rentAgreementNumber",
@@ -302,32 +314,37 @@ function RentWrapper() {
             printable: false,
             renderCell: (params) => (
                   <>
-                      <Button
-                            variant="contained"
-                            color="primary"
-                            sx={{
-                                mt: 1,
-                                mr: 1,
-                            }}
-                            onClick={() => handleOpenRenewModal(params.row)}
-                      >
-                          تجديد
-                      </Button>
-                      {params.row.status === "ACTIVE" && (
+                      {canEdit() &&
                             <>
                                 <Button
                                       variant="contained"
-                                      color="secondary"
+                                      color="primary"
                                       sx={{
                                           mt: 1,
                                           mr: 1,
                                       }}
-                                      onClick={() => handleOpenCancelModal(params.row)}
+                                      onClick={() => handleOpenRenewModal(params.row)}
                                 >
-                                    الغاء العقد
+                                    تجديد
                                 </Button>
+                                {params.row.status === "ACTIVE" && (
+
+                                      <>
+                                          <Button
+                                                variant="contained"
+                                                color="secondary"
+                                                sx={{
+                                                    mt: 1,
+                                                    mr: 1,
+                                                }}
+                                                onClick={() => handleOpenCancelModal(params.row)}
+                                          >
+                                              الغاء العقد
+                                          </Button>
+                                      </>
+                                )}
                             </>
-                      )}
+                      }
                   </>
             ),
         },

@@ -4,17 +4,17 @@ import {Calendar, momentLocalizer, Views} from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import {
-  Box,
-  Button,
-  IconButton,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
+    Box,
+    Button,
+    IconButton,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Typography,
 } from "@mui/material";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
@@ -34,6 +34,9 @@ import {useSubmitLoader} from "@/app/context/SubmitLoaderProvider/SubmitLoaderPr
 import {RenewRent} from "@/app/UiComponents/Modals/RenewRent";
 import {CancelRent} from "@/app/UiComponents/Modals/CancelRentModal";
 import EndingRents from "@/app/components/EndingRents";
+import {useAuth} from "@/app/context/AuthProvider/AuthProvider";
+import {usePathname} from "next/navigation";
+import {getCurrentPrivilege} from "@/helpers/functions/getUserPrivilege";
 
 moment.locale("ar"); // Set moment locale globally to Arabic
 const localizer = momentLocalizer(moment);
@@ -424,6 +427,13 @@ const PaymentRow = ({
             },
         },
     ];
+    const {user} = useAuth();
+    const pathName = usePathname();
+
+    function canCreate() {
+        const currentPrivilege = getCurrentPrivilege(user, pathName);
+        return currentPrivilege?.privilege.canWrite;
+    }
 
 
     return (
@@ -465,7 +475,7 @@ const PaymentRow = ({
                   {item.rentAgreement?.unit.client.name || item.client?.name + "(مالك)"}
               </TableCell>
               <TableCell>
-                  {item.status !== "PAID" && (
+                  {item.status !== "PAID" && canCreate() && (
                         <Button
                               variant="contained"
                               color="primary"
@@ -535,6 +545,14 @@ const EndingAgreementsSection = ({
                                  }) => {
 
     const [data, setData] = useState(agreements)
+    const {user} = useAuth();
+    const pathName = usePathname()
+
+    function canEdit() {
+        const currentPrivilege = getCurrentPrivilege(user, pathName);
+        return currentPrivilege?.privilege.canEdit;
+    }
+
     useEffect(() => {
         if (!loading) {
             setData(agreements)
@@ -582,10 +600,14 @@ const EndingAgreementsSection = ({
 
                                           }}
                                     >
-                                        <RenewRent data={agreement} setData={setData}/>
-                                        {agreement?.status === "ACTIVE" && (
-                                              <CancelRent data={agreement} setData={setData}/>
-                                        )}
+                                        {canEdit() &&
+                                              <>
+                                                  <RenewRent data={agreement} setData={setData}/>
+                                                  {agreement?.status === "ACTIVE" && (
+                                                        <CancelRent data={agreement} setData={setData}/>
+                                                  )}
+                                              </>
+                                        }
                                     </TableCell>
                                 </TableRow>
                           ))}
