@@ -1,19 +1,19 @@
 "use client";
 import React, {useEffect, useRef, useState} from "react";
 import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Container,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Snackbar,
-  TableCell,
-  TableRow,
-  Typography,
+    Alert,
+    Box,
+    Button,
+    CircularProgress,
+    Container,
+    FormControl,
+    InputLabel,
+    MenuItem,
+    Select,
+    Snackbar,
+    TableCell,
+    TableRow,
+    Typography,
 } from "@mui/material";
 import {useReactToPrint} from "react-to-print";
 import dayjs from "dayjs";
@@ -36,10 +36,11 @@ const columnsRentAgreements = [
 
 const RentAgreementsReport = () => {
     const [properties, setProperties] = useState([]);
+    const [selectedRent, setSelectedRent] = useState("all")
+
     const [selectedProperties, setSelectedProperties] = useState([]);
     const [startDate, setStartDate] = useState(dayjs().startOf("month"));
     const [endDate, setEndDate] = useState(dayjs().endOf("month"));
-    const [status, setStatus] = useState("ALL");
     const [reportData, setReportData] = useState(null);
     const componentRef = useRef();
     const [loading, setLoading] = useState(true);
@@ -67,7 +68,7 @@ const RentAgreementsReport = () => {
             propertyIds: selectedProperties,
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
-            status,
+            rentStatus: selectedRent,
         };
 
         try {
@@ -87,6 +88,11 @@ const RentAgreementsReport = () => {
         content: () => componentRef.current,
         documentTitle: "تقرير عقود الإيجار",
     });
+
+    function handleRentStatusChange(e) {
+        const selectedRent = e.target.value;
+        setSelectedRent(selectedRent)
+    }
 
     const renderTableRows = (data, columns, colSpan) => {
         let totalContractAmount = 0;
@@ -246,38 +252,20 @@ const RentAgreementsReport = () => {
                       </Select>
                   </FormControl>
 
-                  {/*<FormControl fullWidth margin="normal">*/}
-                  {/*  <InputLabel>الحالة</InputLabel>*/}
-                  {/*  <Select*/}
-                  {/*        value={status}*/}
-                  {/*        onChange={(e) => setStatus(e.target.value)}*/}
-                  {/*  >*/}
-                  {/*    <MenuItem value="ALL">الجميع</MenuItem>*/}
-                  {/*    <MenuItem value="ACTIVE">نشط</MenuItem>*/}
-                  {/*    <MenuItem value="EXPIRED">منتهي</MenuItem>*/}
-                  {/*    <MenuItem value="CANCELED"> ملغي</MenuItem>*/}
-                  {/*  </Select>*/}
-                  {/*</FormControl>*/}
-
-                  {/*<LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en-gb">*/}
-                  {/*  <FormControl fullWidth margin="normal">*/}
-                  {/*    <DatePicker*/}
-                  {/*          label="تاريخ البدء"*/}
-                  {/*          value={startDate}*/}
-                  {/*          onChange={(date) => setStartDate(date)}*/}
-                  {/*          renderInput={(params) => <TextField {...params} />}*/}
-                  {/*    />*/}
-                  {/*  </FormControl>*/}
-                  {/*  <FormControl fullWidth margin="normal">*/}
-                  {/*    <DatePicker*/}
-                  {/*          label="تاريخ الانتهاء"*/}
-                  {/*          value={endDate}*/}
-                  {/*          onChange={(date) => setEndDate(date)}*/}
-                  {/*          renderInput={(params) => <TextField {...params} />}*/}
-                  {/*    />*/}
-                  {/*  </FormControl>*/}
-                  {/*</LocalizationProvider>*/}
-
+                  <FormControl fullWidth margin="normal">
+                      <InputLabel>حالة العقد</InputLabel>
+                      <Select value={selectedRent} onChange={handleRentStatusChange}>
+                          <MenuItem value={"all"}>
+                              الجميع
+                          </MenuItem>
+                          <MenuItem value={"ACTIVE"}>
+                              نشط
+                          </MenuItem>
+                          <MenuItem value={"EXPIRED"}>
+                              منتهي
+                          </MenuItem>
+                      </Select>
+                  </FormControl>
                   <Button
                         variant="contained"
                         color="primary"

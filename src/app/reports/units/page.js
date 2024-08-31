@@ -130,20 +130,19 @@ const Reports = () => {
                                     }
 
                                     if (col.english.includes("amount")) {
-                                        totalAmount += row.amount;
+                                        totalAmount += isNaN(row.amount) ? 0 : +row.amount;
                                     }
                                     if (col.english === "yearlyRentPrice") {
-                                        totalAmount += row.yearlyRentPrice;
+                                        totalAmount += isNaN(row.yearlyRentPrice) ? 0 : +row.yearlyRentPrice;
                                     }
                                     if (col.english.includes("totalPrice")) {
-                                        totalAmount += row.totalPrice;
+                                        totalAmount += isNaN(row.totalPrice) ? 0 : +row.totalPrice;
                                     }
                                     if (col.english === "actualRentPrice") {
-                                        totalPaidAmount += +row.actualRentPrice;
+                                        totalPaidAmount += isNaN(row.actualRentPrice) ? 0 : +row.actualRentPrice;
                                     }
                                     if (col.english.includes("totalPrice") && row.invoice?.rentAgreement?.status === "ACTIVE") {
-                                        totalPaidAmount += +row.totalPrice;
-
+                                        totalPaidAmount += isNaN(row.totalPrice) ? 0 : +row.totalPrice;
                                     }
 
                                     if (col.english.includes("paidAmount")) {

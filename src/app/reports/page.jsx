@@ -2,20 +2,20 @@
 "use client";
 import React, {useEffect, useRef, useState} from "react";
 import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Container,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Snackbar,
-  TableCell,
-  TableRow,
-  TextField,
-  Typography,
+    Alert,
+    Box,
+    Button,
+    CircularProgress,
+    Container,
+    FormControl,
+    InputLabel,
+    MenuItem,
+    Select,
+    Snackbar,
+    TableCell,
+    TableRow,
+    TextField,
+    Typography,
 } from "@mui/material";
 import {useReactToPrint} from "react-to-print";
 import {DatePicker, LocalizationProvider} from "@mui/x-date-pickers";
@@ -174,21 +174,21 @@ const Reports = () => {
                                         cellValue = translateInvoiceType(cellValue);
                                     }
 
+
                                     if (col.english.includes("amount")) {
-                                        totalAmount += row.amount;
+                                        totalAmount += isNaN(row.amount) ? 0 : +row.amount;
                                     }
                                     if (col.english === "yearlyRentPrice") {
-                                        totalAmount += row.yearlyRentPrice;
+                                        totalAmount += isNaN(row.yearlyRentPrice) ? 0 : +row.yearlyRentPrice;
                                     }
                                     if (col.english.includes("totalPrice")) {
-                                        totalAmount += row.totalPrice;
+                                        totalAmount += isNaN(row.totalPrice) ? 0 : +row.totalPrice;
                                     }
                                     if (col.english === "actualRentPrice") {
-                                        totalPaidAmount += +row.actualRentPrice;
+                                        totalPaidAmount += isNaN(row.actualRentPrice) ? 0 : +row.actualRentPrice;
                                     }
                                     if (col.english.includes("totalPrice") && row.invoice?.rentAgreement?.status === "ACTIVE") {
-                                        totalPaidAmount += +row.totalPrice;
-
+                                        totalPaidAmount += isNaN(row.totalPrice) ? 0 : +row.totalPrice;
                                     }
 
                                     if (col.english.includes("paidAmount")) {
@@ -197,7 +197,6 @@ const Reports = () => {
                                     if (col.english === "invoice.rentAgreement.status") {
                                         cellValue = translateRentType(cellValue);
                                     }
-
                                     return (
                                           <TableCell
                                                 key={colIndex}

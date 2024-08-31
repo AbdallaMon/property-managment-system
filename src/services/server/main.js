@@ -8,7 +8,7 @@ export async function getUnits(page, limit, searchParams, params) {
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
     const units = await prisma.unit.findMany({
@@ -62,7 +62,7 @@ export async function getRentAgreements(page, limit, searchParams, params) {
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
 
@@ -97,13 +97,21 @@ export async function getRentAgreements(page, limit, searchParams, params) {
                 expired: 0
             };
         }
-        const expiredCount = unit.rentAgreements.filter(agreement =>
-              agreement.status === "EXPIRED" || agreement.endDate < new Date()
+        const expiredCount = unit.rentAgreements.filter(agreement => {
+
+                  if (agreement.status === "CANCELED") {
+                      return null
+                  }
+                  if (
+                        agreement.status === "EXPIRED" || agreement.endDate < new Date()) {
+                      return agreement
+                  }
+              }
         ).length;
         return {
             ...unit,
             active: 0,
-            expired: expiredCount
+            expired: expiredCount > 0 ? 1 : 0,
         };
 
     });
@@ -115,6 +123,7 @@ export async function getRentAgreements(page, limit, searchParams, params) {
         total: totalAgreementsCount,
         active: activeCount,
         expired: expiredCount,
+        unit: units,
     }
 }
 
@@ -127,13 +136,12 @@ export async function getRentPayments(page, limit, searchParams, params) {
     };
     whereClause.rentAgreement = {
         status: "ACTIVE"
-        , endDate: {gt: new Date()}
     }
 
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
     const payments = await prisma.payment.findMany({
@@ -174,7 +182,7 @@ export async function getCurrentMonthPayments(page, limit, searchParams, params)
         },
         rentAgreement: {
             status: "ACTIVE"
-            , endDate: {gt: new Date()}
+
         },
         paymentType: "RENT"
     };
@@ -182,7 +190,7 @@ export async function getCurrentMonthPayments(page, limit, searchParams, params)
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
     const payments = await prisma.payment.findMany({
@@ -213,7 +221,7 @@ export async function getMaintenancePayments(page, limit, searchParams, params) 
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
     const payments = await prisma.payment.findMany({
@@ -258,7 +266,7 @@ export async function getCurrentMonthMaintenancePayments(page, limit, searchPara
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
 
@@ -295,12 +303,11 @@ export async function getOtherPayments(page, limit, searchParams, params) {
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
     whereClause.rentAgreement = {
         status: "ACTIVE"
-        , endDate: {gt: new Date()}
     }
     const payments = await prisma.payment.findMany({
         where: whereClause,
@@ -349,12 +356,11 @@ export async function getCurrentMonthOtherPayments(page, limit, searchParams, pa
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
     whereClause.rentAgreement = {
         status: "ACTIVE"
-        , endDate: {gt: new Date()}
     }
     const payments = await prisma.payment.findMany({
         where: whereClause,

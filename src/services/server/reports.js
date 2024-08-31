@@ -1,12 +1,8 @@
 import prisma from "@/lib/prisma";
-import {PaymentStatus} from "@/app/constants/Enums";
+import {PaymentStatus, StatusType} from "@/app/constants/Enums";
 import {endOfDay, startOfDay} from "@/helpers/functions/dates";
+import {updateWhereClauseWithUserProperties} from "@/app/api/utlis/userProperties";
 
-const statusTranslations = {
-    ACTIVE: "نشط",
-    EXPIRED: "منتهي",
-    CANCELED: "ملغاة",
-};
 
 export async function getReports(page, limit, searchParams, params) {
     const filters = searchParams.get("filters")
@@ -50,7 +46,7 @@ export async function getReports(page, limit, searchParams, params) {
                         rentAgreements: {
                             where: {
                                 status: {
-                                    in: ["ACTIVE", "EXPIRED"],
+                                    in: ["ACTIVE"],
                                 },
                             },
                             select: {
@@ -108,6 +104,11 @@ export async function getReports(page, limit, searchParams, params) {
                             gte: start,
                             lte: end,
                         },
+                        invoice: {
+                            rentAgreement: {
+                                status: 'ACTIVE',
+                            },
+                        },
                     },
                     select: {
                         date: true,
@@ -124,12 +125,12 @@ export async function getReports(page, limit, searchParams, params) {
                                         name: true,
                                     },
                                 },
-
                                 rentAgreement: {
                                     select: {
                                         id: true,
                                         rentAgreementNumber: true,
                                         status: true,
+                                        endDate: true,
                                         unit: {
                                             select: {
                                                 id: true,
@@ -216,7 +217,7 @@ export async function getReports(page, limit, searchParams, params) {
                               startDate: agreement.startDate,
                               endDate: agreement.endDate,
                               totalPrice: agreement.totalPrice,
-                              status: statusTranslations[agreement.status] || agreement.status,
+                              status: StatusType[agreement.status] || agreement.status,
                               unit: unit.number,
                           })),
                       };
@@ -233,13 +234,26 @@ export async function getReports(page, limit, searchParams, params) {
                           status: PaymentStatus[payment.status],
                       })),
                   })),
-                  income: property.incomes.map((income) => ({
-                      date: income.date,
-                      amount: income.amount,
-                      description: income.description,
-                      invoice: income.invoice,
-                      createdAt: income.createdAt,
-                  })),
+                  income: property.incomes.map((income) => {
+                      const currentDate = new Date();
+                      let needsAction = false;
+                      if (new Date(income.invoice.rentAgreement.endDate) <= currentDate) {
+                          needsAction = true
+                      }
+                      return {
+                          date: income.date,
+                          amount: income.amount,
+                          description: income.description,
+                          invoice: {
+                              ...income.invoice,
+                              rentAgreement: {
+                                  ...income.invoice.rentAgreement,
+                                  status: needsAction ? "NEEDSACTION" : income.invoice.rentAgreement.status
+                              }
+                          },
+                          createdAt: income.createdAt,
+                      }
+                  }),
                   expenses: property.expenses.map((expense) => ({
                       date: expense.date,
                       amount: expense.amount,
@@ -365,7 +379,7 @@ export async function getUnitsReports(page, limit, searchParams) {
                               startDate: agreement.startDate,
                               endDate: agreement.endDate,
                               totalPrice: agreement.totalPrice,
-                              status: statusTranslations[agreement.status] || agreement.status,
+                              status: StatusType[agreement.status] || agreement.status,
                               unit: unit.number,
                           })),
                       };
@@ -445,14 +459,16 @@ export async function getOwnersReport(page, limit, searchParams, params) {
     const {ownerIds, startDate, endDate} = filters;
     const start = startOfDay(new Date(startDate));
     const end = endOfDay(new Date(endDate));
-
+    let where = {
+        id: {
+            in: ownerIds.map((id) => parseInt(id, 10)),
+        },
+    }
+    let propertiesWhere = {};
+    propertiesWhere = await updateWhereClauseWithUserProperties("id", propertiesWhere)
     try {
         const owners = await prisma.client.findMany({
-            where: {
-                id: {
-                    in: ownerIds.map((id) => parseInt(id, 10)),
-                },
-            },
+            where,
             select: {
                 id: true,
                 name: true,
@@ -460,6 +476,8 @@ export async function getOwnersReport(page, limit, searchParams, params) {
                 email: true,
                 phone: true,
                 properties: {
+                    where: propertiesWhere
+                    ,
                     select: {
                         id: true,
                         name: true,
@@ -498,6 +516,11 @@ export async function getOwnersReport(page, limit, searchParams, params) {
                                 date: {
                                     gte: start,
                                     lte: end,
+                                },
+                                invoice: {
+                                    rentAgreement: {
+                                        status: 'ACTIVE',
+                                    },
                                 },
                             },
                             select: {
@@ -601,7 +624,7 @@ export async function getPaymentsReport(page, limit, searchParams, params) {
     const filters = searchParams.get("filters")
           ? JSON.parse(searchParams.get("filters"))
           : {};
-    const {unitIds, paymentTypes, paymentStatus, startDate, endDate, status} =
+    const {unitIds, paymentTypes, paymentStatus, startDate, endDate, rentStatus} =
           filters;
 
 
@@ -609,7 +632,7 @@ export async function getPaymentsReport(page, limit, searchParams, params) {
         where: {
             unitId: {in: unitIds.map((id) => parseInt(id, 10))},
             status: {
-                in: ["ACTIVE", "EXPIRED"],
+                in: !rentStatus || rentStatus === "all" ? ["ACTIVE", "EXPIRED"] : [rentStatus],
             },
         },
         select: {
@@ -675,7 +698,7 @@ export async function getPaymentsReport(page, limit, searchParams, params) {
                 if (payment.rentAgreement.status === "ACTIVE") {
                     const currentDate = new Date();
                     if (new Date(payment.rentAgreement.endDate) < currentDate) {
-                        payment.rentAgreement.status = "EXPIRED";
+                        payment.rentAgreement.status = "NEEDSACTION";
                     }
                 }
             }
@@ -688,7 +711,7 @@ export async function getPaymentsReport(page, limit, searchParams, params) {
                 rentAgreement: payment.rentAgreement,
                 date: payment.dueDate,
                 invoices: payment.invoices,
-                rentAgreementStatus: statusTranslations[payment.rentAgreement?.status],
+                rentAgreementStatus: StatusType[payment.rentAgreement?.status],
             };
         });
 
@@ -703,24 +726,23 @@ export const getTaxPaymentsReport = async (
       page,
       limit,
       searchParams,
-      params,
 ) => {
     const filters = searchParams.get("filters")
           ? JSON.parse(searchParams.get("filters"))
           : {};
     const {ownerId, startDate, endDate} = filters;
-    let statusFilter = {};
-
+    let where = {
+        paymentType: "TAX",
+        clientId: parseInt(ownerId, 10),
+        dueDate: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+        },
+    }
+    where = await updateWhereClauseWithUserProperties("propertyId", where)
     try {
         const payments = await prisma.payment.findMany({
-            where: {
-                paymentType: "TAX",
-                clientId: parseInt(ownerId, 10),
-                dueDate: {
-                    gte: new Date(startDate),
-                    lte: new Date(endDate),
-                },
-            },
+            where,
             select: {
                 id: true,
                 paymentType: true,
@@ -827,25 +849,17 @@ export async function getRentAgreementsReports(
       page,
       limit,
       searchParams,
-      params,
 ) {
     const filters = searchParams.get("filters")
           ? JSON.parse(searchParams.get("filters"))
           : {};
-    const {propertyIds, startDate, endDate, status} = filters;
-    const currentDate = new Date();
+    const {propertyIds, startDate, endDate, rentStatus} = filters;
 
-    let statusFilter = {};
-    if (status && status !== "ALL") {
-        statusFilter = {status};
-    }
-    if (status && status === "ALL") {
-        statusFilter = {
-            status: {
-                in: ["ACTIVE", "EXPIRED"],
-            },
-        };
-    }
+    let statusFilter = {
+        status: {
+            in: rentStatus === "all" || !rentStatus ? ["ACTIVE", "EXPIRED"] : [rentStatus],
+        },
+    };
     try {
         const properties = await prisma.property.findMany({
             where: {
@@ -868,17 +882,7 @@ export async function getRentAgreementsReports(
                         id: true,
                         number: true,
                         rentAgreements: {
-                            where: {
-                                status: {
-                                    in: ["ACTIVE", "EXPIRED"],
-                                },
-                                //        AND: [
-                                // { startDate: { gte: new Date(startDate) } },
-                                //        { endDate: { lte: new Date(endDate) } },
-                                //           { endDate: { gte: currentDate } },
-                                //          statusFilter,
-                                //        ],
-                            },
+                            where: statusFilter,
                             select: {
                                 id: true,
                                 rentAgreementNumber: true,
@@ -915,12 +919,12 @@ export async function getRentAgreementsReports(
                     );
                     agreement.remainingAmount =
                           agreement.totalAmount - agreement.paidAmount;
-                    agreement.managementCommission = agreement.totalAmount * 0.03;
+                    agreement.managementCommission = agreement.totalAmount * (property.managementCommission / 100);
 
                     if (agreement.status === "ACTIVE") {
                         const currentDate = new Date();
                         if (new Date(agreement.endDate) < currentDate) {
-                            agreement.customStatus = "منتهي ويجب اتخاذ اجراء ";
+                            agreement.customStatus = "يجب اتخاذ اجراء ";
                         } else {
                             agreement.customStatus = "نشط";
                         }

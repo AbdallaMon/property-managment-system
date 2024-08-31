@@ -20,7 +20,7 @@ export default function PropertyPage({params}) {
 
 const PropertyWrapper = ({unitId}) => {
     const {data, loading} = useDataFetcher("main/units/" + unitId);
-    const {id, submitData} = useTableForm();
+    const {submitData} = useTableForm();
     const {user} = useAuth()
     const pathName = usePathname();
 

@@ -1,10 +1,6 @@
-
-
-CREATE TABLE `UserProperty` (
-    `userId` INT NOT NULL,
-    `propertyId` INT NOT NULL,
-    `assignedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`userId`, `propertyId`),
-    CONSTRAINT `fk_user` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_property` FOREIGN KEY (`propertyId`) REFERENCES `Property`(`id`) ON DELETE CASCADE
-);
+<!-- - add last ending rents to the reports -->
+<!-- - add all ending rent to the charts in home -->
+<!-- - the payments need invoice to be in the first row -->
+<!-- - owners reports and renter reports apply the userProperties -->
+<!-- - عمولة الادارة -->
+- العقود المنتهيه في صفحة المتابعه

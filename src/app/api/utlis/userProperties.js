@@ -26,8 +26,8 @@ export async function updateWhereClauseWithUserProperties(key, where) {
 
 export async function checkIfIdAllowed(id) {
     const properties = await getUserProperties()
-
-    const isAllowed = properties.find(({propertyId}) => propertyId == id)
+    let isAllowed = properties.find(({propertyId}) => propertyId == id)
+    if (!properties || properties.length === 0) isAllowed = true
     if (isAllowed) return true;
     return false
 }

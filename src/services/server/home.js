@@ -20,7 +20,7 @@ import {updateWhereClauseWithUserProperties} from "@/app/api/utlis/userPropertie
 
 export async function getTotalIncome(page, limit, searchParams) {
     const propertyId = searchParams.get("propertyId");
-
+    console.log(propertyId, "propertyId")
     let whereClause = {
         invoice: {
             rentAgreement: {
@@ -31,10 +31,10 @@ export async function getTotalIncome(page, limit, searchParams) {
     if (propertyId && propertyId !== "all") {
         whereClause.propertyId = parseInt(propertyId, 10);
     }
-    if (!propertyId || propertyId !== "all") {
+    if (!propertyId || propertyId === "all") {
         whereClause = await updateWhereClauseWithUserProperties("propertyId", whereClause);
     }
-
+    console.log(whereClause, "whereClause")
     const income = await prisma.income.findMany({where: whereClause});
     const total = income.reduce((sum, inc) => sum + inc.amount, 0);
 

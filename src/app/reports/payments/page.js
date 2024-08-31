@@ -46,7 +46,9 @@ const columnsPayments = [
     {arabic: "المبلغ المدفوع", english: "paidAmount"},
     {arabic: "رقم عقد الإيجار", english: "rentAgreement.rentAgreementNumber"},
     {arabic: "حالة العقد", english: "rentAgreementStatus"},
-    {arabic: "وقت الاستحقاق", english: "date"}
+    {arabic: "وقت الاستحقاق", english: "date"},
+    {arabic: "تاريخ الدفع", english: "paymentDate"},
+    {arabic: "قيمة الدفعه", english: "paymentValue"},
 ];
 
 const translatePaymentType = (type) => {
@@ -67,6 +69,7 @@ const translatePaymentType = (type) => {
 const PaymentsReport = () => {
     const [properties, setProperties] = useState([]);
     const [selectedProperty, setSelectedProperty] = useState("");
+    const [selectedRent, setSelectedRent] = useState("all")
     const [units, setUnits] = useState([]);
     const [selectedUnits, setSelectedUnits] = useState([]);
     const [selectedPaymentTypes, setSelectedPaymentTypes] = useState([]);
@@ -95,6 +98,10 @@ const PaymentsReport = () => {
         fetchData();
     }, []);
 
+    const handleRentStatusChange = async (e) => {
+        const rentId = e.target.value;
+        setSelectedRent(rentId)
+    }
     const handlePropertyChange = async (e) => {
         const propertyId = e.target.value;
         setSelectedProperty(propertyId);
@@ -120,6 +127,7 @@ const PaymentsReport = () => {
         setSubmitLoading(true);
         const filters = {
             propertyId: selectedProperty,
+            rentStatus: selectedRent,
             unitIds: selectedUnits.includes("ALL")
                   ? units.map((unit) => unit.id)
                   : selectedUnits,
@@ -155,58 +163,51 @@ const PaymentsReport = () => {
         return (
               <>
                   {data.map((row, index) => {
-                      const hasInvoices = row.invoices && row.invoices.length > 0;
                       return (
-                            <React.Fragment key={index}>
-                                <TableRow>
-                                    {columns.map((col, colIndex) => {
-                                        let cellValue = col.english
-                                              .split(".")
-                                              .reduce((acc, part) => acc && acc[part], row);
+                            <TableRow key={index}>
+                                {columns.map((col, colIndex) => {
+                                    let cellValue = col.english
+                                          .split(".")
+                                          .reduce((acc, part) => acc && acc[part], row);
 
-                                        if (col.english.includes("date") || col.english.includes("Date")) {
-                                            cellValue = dayjs(cellValue).format("DD/MM/YYYY");
-                                        } else if (col.english.includes("price") || col.english.includes("amount") || col.english.includes("totalPrice") || col.english.includes("paidAmount") || col.english.includes("yearlyRentPrice")) {
-                                            cellValue = formatCurrencyAED(cellValue);
-                                        }
+                                    if (col.english.includes("date") || col.english.includes("Date")) {
+                                        cellValue = dayjs(cellValue).format("DD/MM/YYYY");
+                                    } else if (col.english.includes("price") || col.english.includes("amount") || col.english.includes("totalPrice") || col.english.includes("paidAmount") || col.english.includes("yearlyRentPrice")) {
+                                        cellValue = formatCurrencyAED(cellValue);
+                                    }
 
-                                        if (col.english === "paymentType") {
-                                            cellValue = translatePaymentType(cellValue);
-                                        }
+                                    if (col.english === "paymentType") {
+                                        cellValue = translatePaymentType(cellValue);
+                                    }
 
-                                        if (col.english.includes("amount")) {
-                                            totalAmount += row.amount;
-                                        }
+                                    if (col.english === "paymentDate") {
+                                        // Check if payment is made and set the payment date
+                                        cellValue = row.paidAmount ? dayjs(row.paymentDate).format("DD/MM/YYYY") : "";
+                                    }
 
-                                        if (col.english.includes("paidAmount")) {
-                                            totalPaidAmount += row.paidAmount;
-                                        }
+                                    if (col.english === "paymentValue") {
+                                        // Check if payment is made and set the payment value
+                                        cellValue = row.paidAmount ? formatCurrencyAED(row.paidAmount) : "";
+                                    }
 
-                                        return (
-                                              <TableCell
-                                                    key={colIndex}
-                                                    sx={{backgroundColor: "#ffffff", padding: "10px 8px"}}
-                                              >
-                                                  {cellValue}
-                                              </TableCell>
-                                        );
-                                    })}
-                                </TableRow>
-                                {hasInvoices && row.invoices.map((invoice, invoiceIndex) => (
-                                      <TableRow key={`invoice-${invoiceIndex}`} sx={{backgroundColor: "#e3e3e3"}}>
-                                          <TableCell colSpan={5}>
-                                              <Typography variant="body2">
-                                                  {`قيمة الفاتورة: ${formatCurrencyAED(invoice.amount)}`}
-                                              </Typography>
+                                    if (col.english.includes("amount")) {
+                                        totalAmount += row.amount;
+                                    }
+
+                                    if (col.english.includes("paidAmount")) {
+                                        totalPaidAmount += row.paidAmount;
+                                    }
+
+                                    return (
+                                          <TableCell
+                                                key={colIndex}
+                                                sx={{backgroundColor: "#ffffff", padding: "10px 8px"}}
+                                          >
+                                              {cellValue}
                                           </TableCell>
-                                          <TableCell colSpan={4}>
-                                              <Typography variant="body2">
-                                                  {`تم الدفع في: ${dayjs(invoice.createdAt).format("DD/MM/YYYY")}`}
-                                              </Typography>
-                                          </TableCell>
-                                      </TableRow>
-                                ))}
-                            </React.Fragment>
+                                    );
+                                })}
+                            </TableRow>
                       );
                   })}
                   {columns.some((col) => col.english.includes("amount")) && (
@@ -271,7 +272,20 @@ const PaymentsReport = () => {
                           ))}
                       </Select>
                   </FormControl>
-
+                  <FormControl fullWidth margin="normal">
+                      <InputLabel>حالة العقد</InputLabel>
+                      <Select value={selectedRent} onChange={handleRentStatusChange}>
+                          <MenuItem value={"all"}>
+                              الجميع
+                          </MenuItem>
+                          <MenuItem value={"ACTIVE"}>
+                              نشط
+                          </MenuItem>
+                          <MenuItem value={"EXPIRED"}>
+                              منتهي
+                          </MenuItem>
+                      </Select>
+                  </FormControl>
                   {selectedProperty && (
                         <>
                             <FormControl fullWidth margin="normal">

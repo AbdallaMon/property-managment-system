@@ -44,18 +44,17 @@ export default function AssignPropertiesForm({data, id, setUserId, setData}) {
 function AssignPropertiesModal({user, open, setOpen, setUserId, setData}) {
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [userProperties, setUserProperties] = useState(user.properties);
+    const [userProperties, setUserProperties] = useState(user.properties || []);
     const {setLoading: setSubmitLoading} = useToastContext()
 
     async function getProperties(withoutFetch) {
         setLoading(true);
         let response = [...properties, ...userProperties]
-        if (!withoutFetch) {
+        if (!withoutFetch || properties.length < 1) {
             const request = await fetch("/api/fast-handler?id=properties");
             response = await request.json();
         }
-
-        if (userProperties) {
+        if (user.properties && user.properties.length > 0) {
             const userProps = response.filter((prop) =>
                   user.properties.some(userProp => userProp.propertyId === prop.id)
             );
@@ -67,25 +66,30 @@ function AssignPropertiesModal({user, open, setOpen, setUserId, setData}) {
             setProperties(filteredProps);
         } else {
             setProperties(response);
+            setUserProperties([])
         }
         setLoading(false);
     }
 
     useEffect(() => {
-        if (properties && userProperties) {
+        if (user.properties) {
             getProperties(true)
+        } else {
+            getProperties()
         }
     }, [user])
-    useEffect(() => {
-        getProperties();
-    }, []);
+
 
     async function handleSubmit() {
         const response = await handleRequestSubmit(userProperties, setSubmitLoading, `/settings/permissions/users/${user.id}`, false, "يتم اضافة الوحدات الي المستخدم", "PUT")
         if (response.status === 200) {
             setData((oldData) => oldData.map((item) => {
                 if (item.id === user.id) {
-                    item = {...item, properties: userProperties}
+                    item = {
+                        ...item, properties: userProperties.map((prop) => ({
+                            propertyId: prop.id
+                        }))
+                    }
                 }
                 return item
             }))
@@ -132,11 +136,12 @@ function AssignPropertiesModal({user, open, setOpen, setUserId, setData}) {
                         setProperties={setProperties}
                         setUserProperties={setUserProperties}
                   />
-                  <UserProperties
-                        setUserProperties={setUserProperties}
-                        setProperties={setProperties}
-                        userProperties={userProperties}
-                  />
+                  {loading ? "جاري التحميل" :
+                        <UserProperties
+                              setUserProperties={setUserProperties}
+                              setProperties={setProperties}
+                              userProperties={userProperties}
+                        />}
               </DialogContent>
 
               <DialogActions>
@@ -186,14 +191,15 @@ function PropertiesSelect({properties, loading, setUserProperties, setProperties
 
 function UserProperties({userProperties, setProperties, setUserProperties}) {
     function handleDelete(property) {
-        const newUserProperties = userProperties.filter((prop) => prop.id !== property.id);
+        const newUserProperties = userProperties?.filter((prop) => prop.id !== property.id);
         setUserProperties(newUserProperties);
         setProperties((old) => [...old, property]);
     }
 
+
     return (
           <List sx={{mt: 2}}>
-              {userProperties.map((property) => (
+              {userProperties?.map((property) => (
                     <ListItem
                           key={property.id}
                           secondaryAction={

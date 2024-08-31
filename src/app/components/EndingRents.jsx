@@ -1,49 +1,28 @@
-"use client";
-import TableFormProvider, {useTableForm,} from "@/app/context/TableFormProvider/TableFormProvider";
-import {useDataFetcher} from "@/helpers/hooks/useDataFetcher";
+"use client"
 import ViewComponent from "@/app/components/ViewComponent/ViewComponent";
-import {useEffect, useState} from "react";
-
-import {rentAgreementInputs} from "./rentInputs";
-import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
+import {useDataFetcher} from "@/helpers/hooks/useDataFetcher";
+import TableFormProvider, {useTableForm} from "@/app/context/TableFormProvider/TableFormProvider";
+import {useState} from "react";
+import {rentAgreementInputs} from "@/app/rent/rentInputs";
 import {submitRentAgreement} from "@/services/client/createRentAgreement";
+import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
+import Link from "next/link";
+import {Button, Typography} from "@mui/material";
+import {StatusType} from "@/app/constants/Enums";
+import dayjs from "dayjs";
+import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
 import {RenewRentModal} from "@/app/UiComponents/Modals/RenewRent";
 import {CancelRentModal} from "@/app/UiComponents/Modals/CancelRentModal";
-import {Box, Button, FormControl, Select, Typography} from "@mui/material";
-import Link from "next/link";
-import {StatusType} from "@/app/constants/Enums";
-import MenuItem from "@mui/material/MenuItem";
-import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
-import dayjs from "dayjs";
-import "dayjs/locale/en-gb";
 
-export default function RentPage({searchParams}) {
-    const propertyId = searchParams?.propertyId;
+export default function EndingRents() {
     return (
           <TableFormProvider url={"fast-handler"}>
-              <RentWrapper propperty={propertyId}/>
+              <RentWrapper/>
           </TableFormProvider>
     );
 }
 
-const RentWrapper = ({propperty}) => {
-    const {
-        data,
-        loading,
-        page,
-        setPage,
-        limit,
-        setLimit,
-        totalPages,
-        setData,
-        total,
-        setTotal,
-        setRender,
-        others,
-        setOthers,
-        search,
-        setSearch,
-    } = useDataFetcher(`main/rentAgreements?rented=true&`);
+function RentWrapper() {
     const {
         data: expiredData,
         loading: expiredLoading,
@@ -55,37 +34,15 @@ const RentWrapper = ({propperty}) => {
         setData: setExpiredData,
         total: expiredTotal,
         setTotal: setExpiredTotal,
-        setRender: setExpiredRender,
-        others: expiredOthers,
-        setOthers: setExpiredOthers,
-        search: expiredSearch,
-        setSearch: setExpiredSearch,
+
     } = useDataFetcher(`main/rentAgreements?rented=expired&`);
-    const {id, submitData} = useTableForm();
-    const [propertyId, setPropertyId] = useState(null);
-    const [properties, setProperties] = useState([]);
-    const [loadingProperty, setLoadingProperty] = useState(true);
-    useEffect(() => {
-        async function getD() {
-            setLoadingProperty(true);
-            const properties = await getProperties();
-
-            setProperties(properties.data);
-            setLoadingProperty(false);
-        }
-
-        getD();
-    }, []);
-    const [disabled, setDisabled] = useState({
-        unitId: true,
-    });
-    const [reFetch, setRefetch] = useState({
-        unitId: false,
-    });
     const [renewModalOpen, setRenewModalOpen] = useState(false);
     const [cancelModalOpen, setCancelModalOpen] = useState(false);
+    const {id, submitData} = useTableForm();
+
     const [renewData, setRenewData] = useState(null);
     const [cancelData, setCancelData] = useState(null);
+
 
     async function getRenters() {
         const res = await fetch("/api/fast-handler?id=renter");
@@ -94,39 +51,6 @@ const RentWrapper = ({propperty}) => {
         return {data};
     }
 
-    async function getProperties() {
-        const res = await fetch("/api/fast-handler?id=properties");
-        const data = await res.json();
-        return {data};
-    }
-
-    function handlePropertyChange(value) {
-        setPropertyId(value);
-        setDisabled({
-            ...disabled,
-            unitId: false,
-        });
-        setRefetch({
-            ...reFetch,
-            unitId: true,
-        });
-    }
-
-    async function getUnits() {
-        const res = await fetch(
-              "/api/fast-handler?id=unit&propertyId=" + propertyId,
-        );
-        const data = await res.json();
-        const dataWithLabel = data.map((item) => {
-            return {
-                ...item,
-                name: item.number,
-                disabled: item.rentAgreements?.some((rent) => rent.status === "ACTIVE"),
-            };
-        });
-
-        return {data: dataWithLabel, id: propertyId};
-    }
 
     async function getRentCollectionType() {
         const data = [
@@ -157,13 +81,10 @@ const RentWrapper = ({propperty}) => {
             case "propertyId":
                 return {
                     ...input,
-                    getData: getProperties,
-                    onChange: handlePropertyChange,
                 };
             case "unitId":
                 return {
                     ...input,
-                    getData: getUnits,
                 };
             default:
                 return input;
@@ -216,10 +137,10 @@ const RentWrapper = ({propperty}) => {
               ],
               true,
         );
-        const newData = data.filter((item) => {
+        const newData = expiredData.filter((item) => {
             return +item.id !== +cancelData.id;
         });
-        setData(newData);
+        setExpiredData(newData);
         cancelData.status = "CANCELED";
         handleCloseCancelModal();
     };
@@ -228,7 +149,7 @@ const RentWrapper = ({propperty}) => {
     const handleRenewSubmit = async (data) => {
         const extraData = {otherExpenses: []};
         data = {...data, extraData};
-        const returedData = await submitRentAgreement(
+        await submitRentAgreement(
               {...data},
               setSubmitLoading,
               "PUT",
@@ -251,17 +172,13 @@ const RentWrapper = ({propperty}) => {
                   },
               ],
         );
-        if (!returedData) return;
-        setData((old) =>
-              [...old, returedData].map((item) => {
-                  if (+item.id !== +renewData.id) {
-                      return item;
-                  }
-              }),
-        );
+        console.log("we are here what is wrong?")
+        const newData = expiredData.filter((item) => {
+            return +item.id !== +renewData.id;
+        });
+        setExpiredData(newData);
         handleCloseRenewModal();
     };
-
     const columns = [
         {
             field: "rentAgreementNumber",
@@ -420,71 +337,8 @@ const RentWrapper = ({propperty}) => {
         return await submitRentAgreement(data, setSubmitLoading);
     }
 
-    function handlePropertyFilterChange(event) {
-        setOthers("propertyId=" + event.target.value);
-        setExpiredOthers("propertyId=" + event.target.value);
-    }
-
     return (
           <>
-              <Box
-                    sx={{
-                        display: "flex",
-                        gap: 2,
-                        flexDirection: {
-                            xs: "column",
-                            sm: "row",
-                        },
-                        alignItems: "center",
-                    }}
-              >
-                  <FormControl sx={{mb: 2, maxWidth: 300}}>
-                      <Typography variant="h6">عقود الايجار لعقار معين</Typography>
-                      <Select
-                            value={others.split("=")[1] || "all"}
-                            onChange={handlePropertyFilterChange}
-                            displayEmpty
-                            fullWidth
-                            loading={loadingProperty}
-                      >
-                          <MenuItem value="all">حميع العقود </MenuItem>
-                          {properties?.map((property) => (
-                                <MenuItem value={property.id} key={property.id}>
-                                    {property.name}
-                                </MenuItem>
-                          ))}
-                      </Select>
-                  </FormControl>
-                  <Link href="rent/canceled">
-                      <Button variant="text" color="secondary">
-                          عقود الايجار الملغية
-                      </Button>
-                  </Link>
-              </Box>
-              <ViewComponent
-                    inputs={dataInputs}
-                    formTitle={"عقد ايجار "}
-                    totalPages={totalPages}
-                    rows={data}
-                    columns={columns}
-                    page={page}
-                    setPage={setPage}
-                    limit={limit}
-                    setLimit={setLimit}
-                    extraData={{otherExpenses: []}}
-                    extraDataName={"otherExpenses"}
-                    id={id}
-                    loading={loading}
-                    setData={setData}
-                    setTotal={setTotal}
-                    total={total}
-                    noModal={true}
-                    disabled={disabled}
-                    reFetch={reFetch}
-                    submitFunction={submit}
-                    url={"main/rentAgreements"}
-                    title={"عقود الايجار النشطة"}
-              ></ViewComponent>
               <ViewComponent
                     inputs={dataInputs}
                     formTitle={"عقد ايجار "}
@@ -501,14 +355,11 @@ const RentWrapper = ({propperty}) => {
                     setTotal={setExpiredTotal}
                     total={expiredTotal}
                     noModal={true}
-                    disabled={disabled}
-                    reFetch={reFetch}
                     submitFunction={submit}
                     noTabs={true}
                     url={"main/expiredRentAgreements"}
                     title={"عقود ايجار بحاجة الي اتخاذ اجراء معها"}
               />
-
               <RenewRentModal
                     open={renewModalOpen}
                     handleClose={handleCloseRenewModal}
@@ -523,5 +374,5 @@ const RentWrapper = ({propperty}) => {
                     handleConfirm={handleCancelConfirm}
               />
           </>
-    );
-};
+    )
+}

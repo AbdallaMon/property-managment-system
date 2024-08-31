@@ -1,5 +1,6 @@
 "use client"
 import {Form} from "@/app/UiComponents/FormComponents/Forms/Form";
+import {renterInputs} from "@/app/renters/renterInputs";
 import {useAuth} from "@/app/context/AuthProvider/AuthProvider";
 import {usePathname} from "next/navigation";
 import {getCurrentPrivilege} from "@/helpers/functions/getUserPrivilege";
@@ -9,7 +10,6 @@ import useEditState from "@/helpers/hooks/useEditState";
 import {handleRequestSubmit} from "@/helpers/functions/handleRequestSubmit";
 import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
 import TableFormProvider from "@/app/context/TableFormProvider/TableFormProvider";
-import {ownerInputs} from "@/app/owners/ownerInputs";
 
 export default function Renter({params: {id}}) {
     const [data, setData] = useState(null)
@@ -45,7 +45,7 @@ export default function Renter({params: {id}}) {
 
         async function getClient() {
             setLoader(true)
-            const request = await fetch("/api/clients/owner/" + id)
+            const request = await fetch("/api/clients/renter/" + id)
             const response = await request.json()
             setData(response)
             setLoader(false)
@@ -94,7 +94,7 @@ export default function Renter({params: {id}}) {
     }, [loading, data]);
     if (loading) return <div>Loading...</div>;
     if (!renderedDefault) return;
-    const dataInputs = ownerInputs.map((input) => {
+    const dataInputs = renterInputs.map((input) => {
         input = {
             ...input,
             value: data[input.data.id],
@@ -108,7 +108,7 @@ export default function Renter({params: {id}}) {
         if (!continueCreation) return;
 
         data = {...data, extraData: {bankAccounts}};
-        const res = await handleRequestSubmit(data, setLoading, `/clients/owner/${id}`, false, "جاري الحفظ", "PUT")
+        const res = await handleRequestSubmit(data, setLoading, `/clients/renter/${id}`, false, "Updating", "PUT")
     }
 
     return (
