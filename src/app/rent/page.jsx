@@ -9,18 +9,17 @@ import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
 import {submitRentAgreement} from "@/services/client/createRentAgreement";
 import {RenewRentModal} from "@/app/UiComponents/Modals/RenewRent";
 import {CancelRentModal} from "@/app/UiComponents/Modals/CancelRentModal";
-import {Alert, Box, Button, FormControl, Select, Snackbar, TextField, Typography} from "@mui/material";
+import {Alert, Box, Button, FormControl, Select, Snackbar, Typography} from "@mui/material";
 import Link from "next/link";
 import {StatusType} from "@/app/constants/Enums";
 import MenuItem from "@mui/material/MenuItem";
 import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
-import {Controller} from "react-hook-form";
-import {DatePicker} from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import "dayjs/locale/en-gb";
 import {useAuth} from "@/app/context/AuthProvider/AuthProvider";
 import {usePathname} from "next/navigation";
 import {getCurrentPrivilege} from "@/helpers/functions/getUserPrivilege";
+import {InstallmentComponent} from "@/app/components/InstallmentComponent";
 
 async function getRentCollectionType() {
     const data = [
@@ -32,15 +31,6 @@ async function getRentCollectionType() {
     ];
     return {data};
 }
-
-const RentCollectionType = {
-    TWO_MONTHS: 2,
-    THREE_MONTHS: 3,
-    FOUR_MONTHS: 4,
-    SIX_MONTHS: 6,
-    ONE_YEAR: 12,
-};
-
 
 export default function RentPage({searchParams}) {
     const propertyId = searchParams?.propertyId;
@@ -86,13 +76,13 @@ const RentWrapper = ({propperty}) => {
         search: expiredSearch,
         setSearch: setExpiredSearch,
     } = useDataFetcher(`main/rentAgreements?rented=expired&`);
-    const {id, submitData} = useTableForm();
+    const {id} = useTableForm();
     const [propertyId, setPropertyId] = useState(null);
     const [properties, setProperties] = useState([]);
     const [loadingProperty, setLoadingProperty] = useState(true);
     const {user} = useAuth();
     const [snackbarOpen, setSnackbarOpen] = useState(false);
-
+    const [rerender, setRerender] = useState(false)
     const pathName = usePathname();
 
     function canEdit() {
@@ -248,13 +238,23 @@ const RentWrapper = ({propperty}) => {
         cancelData.status = "CANCELED";
         handleCloseCancelModal();
     };
+    const validateTotalPrice = (data) => {
+        const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
 
+        const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
+
+        return totalInstallmentAmount === discountedTotalPrice;
+    };
     const {setLoading: setSubmitLoading} = useToastContext();
-    const handleRenewSubmit = async (data) => {
+    const handleRenewSubmit = async (formData) => {
+        if (!validateTotalPrice(formData)) {
+            setSnackbarOpen(true);
+            return;
+        }
         const extraData = {otherExpenses: []};
-        data = {...data, extraData};
-        const returedData = await submitRentAgreement(
-              {...data},
+        formData = {...formData, extraData};
+        await submitRentAgreement(
+              {...formData},
               setSubmitLoading,
               "PUT",
               [
@@ -276,18 +276,10 @@ const RentWrapper = ({propperty}) => {
                   },
               ],
         );
-
-        if (!returedData) return;
-        setData((old) =>
-              [...old, returedData].map((item) => {
-                  if (+item.id !== +renewData.id) {
-                      return item;
-                  }
-              }),
-        );
+        const newData = data.filter((item) => +item.id !== +renewData.id)
+        setData(newData);
         handleCloseRenewModal();
     };
-
     const columns = [
         {
             field: "rentAgreementNumber",
@@ -448,13 +440,7 @@ const RentWrapper = ({propperty}) => {
     const handleSnackbarClose = () => {
         setSnackbarOpen(false);
     };
-    const validateTotalPrice = (data) => {
-        const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
 
-        const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
-
-        return totalInstallmentAmount === discountedTotalPrice;
-    };
 
     async function submit(data) {
         if (!validateTotalPrice(data)) {
@@ -528,8 +514,8 @@ const RentWrapper = ({propperty}) => {
                     submitFunction={submit}
                     url={"main/rentAgreements"}
                     title={"عقود الايجار النشطة"}
-                    extraComponent={ExtraComponent}
-
+                    extraComponent={InstallmentComponent}
+                    rerender={rerender}
               ></ViewComponent>
 
               <ViewComponent
@@ -572,7 +558,6 @@ const RentWrapper = ({propperty}) => {
                     onSubmit={handleRenewSubmit}
               >
               </RenewRentModal>
-
               <CancelRentModal
                     open={cancelModalOpen}
                     handleClose={handleCloseCancelModal}
@@ -583,139 +568,3 @@ const RentWrapper = ({propperty}) => {
 };
 
 
-export function ExtraComponent({data, control, register, errors, setValue, defaultInstallments}) {
-    let {rentCollectionType, startDate, endDate, totalPrice, discount} = data;
-    const [installments, setInstallments] = useState(defaultInstallments || []);
-    useEffect(() => {
-        if (defaultInstallments) {
-            setInstallments(defaultInstallments)
-        }
-    }, [defaultInstallments])
-    useEffect(() => {
-        if (rentCollectionType && startDate && endDate && totalPrice) {
-            calculateInstallments();
-        }
-    }, [rentCollectionType, startDate, endDate, totalPrice, discount]);
-
-    const calculateInstallments = () => {
-        const start = dayjs(startDate);
-        const end = dayjs(endDate);
-        const monthDifference =
-              end.diff(start, 'month') + 1;
-
-        const totalInstallments = Math.ceil(
-              monthDifference / RentCollectionType[rentCollectionType]
-        );
-        totalPrice = totalPrice - (discount || 0);
-        const installmentBaseAmount = totalPrice / totalInstallments;
-        let remainingAmount = totalPrice;
-
-        const newInstallments = Array(totalInstallments)
-              .fill()
-              .map((_, i) => {
-                  let dueDate = start.add(i * RentCollectionType[rentCollectionType], 'month');
-                  let endDate = dueDate.add(RentCollectionType[rentCollectionType], 'month');
-
-                  let installmentAmount;
-                  if (i === totalInstallments - 1) {
-                      installmentAmount = remainingAmount;
-                  } else {
-                      installmentAmount = Math.round(installmentBaseAmount / 50) * 50;
-                      remainingAmount -= installmentAmount;
-                  }
-
-                  // Update the form values using setValue from react-hook-form
-                  setValue(`installments[${i}].dueDate`, dueDate.format("YYYY-MM-DD"));
-                  setValue(`installments[${i}].amount`, installmentAmount);
-
-                  return {
-                      startDate: start.format("YYYY-MM-DD"),
-                      dueDate: dueDate.format("YYYY-MM-DD"),
-                      endDate: endDate.format("YYYY-MM-DD"),
-                      amount: installmentAmount,
-                  };
-              });
-
-        setInstallments(newInstallments);
-    };
-
-    return (
-          <Box>
-              {installments.map((installment, index) => (
-                    <Box key={index} mb={2} p={2} border={1} borderRadius={2} borderColor="grey.300">
-                        <Typography variant="h6">القسط {index + 1}</Typography>
-
-                        <FormControl
-                              fullWidth
-                              error={!!errors[`installments[${index}].dueDate`]}
-                              sx={{
-                                  width: {
-                                      xs: "100%",
-                                      md: "48%",
-                                  },
-                                  mr: "auto",
-                              }}
-                        >
-                            <Controller
-                                  name={`installments[${index}].dueDate`}
-                                  control={control}
-                                  defaultValue={installment.dueDate ? dayjs(installment.dueDate) : null}
-                                  rules={{
-                                      required: {
-                                          value: true,
-                                          message: "يرجى إدخال تاريخ الاستحقاق",
-                                      },
-                                  }}
-                                  render={({field: {onChange, value}, fieldState: {error}}) => (
-                                        <DatePicker
-                                              id={`installments[${index}].dueDate`}
-                                              label="تاريخ الاستحقاق"
-                                              value={value ? dayjs(value) : null}
-                                              onChange={(date) => {
-                                                  onChange(date ? date.format("YYYY-MM-DD") : null);
-                                              }}
-                                              renderInput={(params) => (
-                                                    <TextField
-                                                          {...params}
-                                                          error={!!error}
-                                                          helperText={error ? error.message : ""}
-                                                          placeholder="DD/MM/YYYY"
-                                                    />
-                                              )}
-                                        />
-                                  )}
-                            />
-                        </FormControl>
-
-                        <TextField
-                              fullWidth
-                              sx={{
-                                  width: {
-                                      xs: "100%",
-                                      md: "48%",
-                                  },
-                                  mr: "auto",
-                              }}
-                              id={`installments[${index}].amount`}
-                              label="المبلغ"
-                              type="number"
-                              variant="outlined"
-                              defaultValue={installment.amount}
-                              {...register(`installments[${index}].amount`, {
-                                  required: {
-                                      value: true,
-                                      message: "يرجى إدخال المبلغ",
-                                  },
-                                  min: {
-                                      value: 1,
-                                      message: "المبلغ يجب أن يكون أكبر من 0",
-                                  },
-                              })}
-                              error={!!errors[`installments[${index}].amount`]}
-                              helperText={errors[`installments[${index}].amount`] ? errors[`installments[${index}].amount`].message : ""}
-                        />
-                    </Box>
-              ))}
-          </Box>
-    );
-}

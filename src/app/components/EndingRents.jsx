@@ -2,12 +2,12 @@
 import ViewComponent from "@/app/components/ViewComponent/ViewComponent";
 import {useDataFetcher} from "@/helpers/hooks/useDataFetcher";
 import TableFormProvider, {useTableForm} from "@/app/context/TableFormProvider/TableFormProvider";
-import {useState} from "react";
+import React, {useState} from "react";
 import {rentAgreementInputs} from "@/app/rent/rentInputs";
 import {submitRentAgreement} from "@/services/client/createRentAgreement";
 import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
 import Link from "next/link";
-import {Button, Typography} from "@mui/material";
+import {Alert, Button, Snackbar, Typography} from "@mui/material";
 import {StatusType} from "@/app/constants/Enums";
 import dayjs from "dayjs";
 import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
@@ -42,6 +42,7 @@ function RentWrapper() {
     const [renewModalOpen, setRenewModalOpen] = useState(false);
     const [cancelModalOpen, setCancelModalOpen] = useState(false);
     const {id, submitData} = useTableForm();
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
 
     const [renewData, setRenewData] = useState(null);
     const [cancelData, setCancelData] = useState(null);
@@ -116,7 +117,16 @@ function RentWrapper() {
         setCancelModalOpen(false);
         setCancelData(null);
     };
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
+    };
+    const validateTotalPrice = (data) => {
+        const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
 
+        const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
+
+        return totalInstallmentAmount === discountedTotalPrice;
+    };
     const handleCancelConfirm = async () => {
         await submitRentAgreement(
               {...cancelData, canceling: true},
@@ -152,6 +162,10 @@ function RentWrapper() {
 
     const {setLoading: setSubmitLoading} = useToastContext();
     const handleRenewSubmit = async (data) => {
+        if (!validateTotalPrice(data)) {
+            setSnackbarOpen(true);
+            return;
+        }
         const extraData = {otherExpenses: []};
         data = {...data, extraData};
         await submitRentAgreement(
@@ -351,11 +365,24 @@ function RentWrapper() {
     ];
 
     async function submit(data) {
+        if (!validateTotalPrice(data)) {
+            setSnackbarOpen(true);
+            return;
+        }
         return await submitRentAgreement(data, setSubmitLoading);
     }
 
     return (
           <>
+              <Snackbar
+                    open={snackbarOpen}
+                    autoHideDuration={6000}
+                    onClose={handleSnackbarClose}
+              >
+                  <Alert onClose={handleSnackbarClose} severity="error">
+                      المجموع الكلي للأقساط لا يتطابق مع السعر الكلي. يرجى التحقق من المدخلات.
+                  </Alert>
+              </Snackbar>
               <ViewComponent
                     inputs={dataInputs}
                     formTitle={"عقد ايجار "}

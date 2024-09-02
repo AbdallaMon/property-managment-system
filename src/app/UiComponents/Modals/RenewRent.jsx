@@ -1,17 +1,19 @@
-import {Box, Button, Modal, Typography} from "@mui/material";
+import {Alert, Box, Button, Modal, Snackbar, Typography} from "@mui/material";
 import {Form} from "@/app/UiComponents/FormComponents/Forms/Form";
 import React, {useEffect, useState} from "react";
 import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
 import {useRouter} from "next/navigation";
 import {rentAgreementInputs} from "@/app/rent/rentInputs";
 import {submitRentAgreement} from "@/services/client/createRentAgreement";
-import {ExtraComponent} from "@/app/rent/page";
+import {InstallmentComponent} from "@/app/components/InstallmentComponent";
 
 export const RenewRent = ({data, setData}) => {
     const [renewModalOpen, setRenewModalOpen] = useState(false);
     const [renewData, setRenewData] = useState(null);
     const {setLoading: setSubmitLoading} = useToastContext();
     const [propertyId, setPropertyId] = useState(data.unit.property.id);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+
     const [disabled, setDisabled] = useState({
         unitId: false,
     });
@@ -130,7 +132,23 @@ export const RenewRent = ({data, setData}) => {
                 return input;
         }
     });
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
+    };
+    const validateTotalPrice = (data) => {
+        const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
+
+        const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
+        console.log(totalInstallmentAmount, "totalInstallment")
+        console.log(discountedTotalPrice, "discounter")
+        return totalInstallmentAmount === discountedTotalPrice;
+    };
+
     const handleRenewSubmit = async (data) => {
+        if (!validateTotalPrice(data)) {
+            setSnackbarOpen(true);
+            return;
+        }
         const extraData = {otherExpenses: []};
         data = {...data, extraData};
         const returedData = await submitRentAgreement(
@@ -159,12 +177,11 @@ export const RenewRent = ({data, setData}) => {
         if (!returedData) return;
         if (setData) {
             setData((prevData) => {
-                return prevData.map((item) => {
-                    return item.id !== renewData.id
+                return prevData.filter((item) => {
+                    return +item.id !== +renewData.id
                 });
             });
         } else {
-
             router.push("/rent/" + returedData.id);
         }
         handleCloseRenewModal();
@@ -186,6 +203,15 @@ export const RenewRent = ({data, setData}) => {
                     inputs={dataInputs}
                     onSubmit={handleRenewSubmit}
               />
+              <Snackbar
+                    open={snackbarOpen}
+                    autoHideDuration={6000}
+                    onClose={handleSnackbarClose}
+              >
+                  <Alert onClose={handleSnackbarClose} severity="error">
+                      المجموع الكلي للأقساط لا يتطابق مع السعر الكلي. يرجى التحقق من المدخلات.
+                  </Alert>
+              </Snackbar>
           </>
     );
 };
@@ -265,7 +291,6 @@ export function RenewRentModal({
     }, [open, initialData]);
 
     if (!open) return null;
-    console.log(initialData, "initialData")
     return (
           <Modal open={open} onClose={handleClose}>
               <Box
@@ -301,7 +326,7 @@ export function RenewRentModal({
                         variant={"outlined"}
                         btnText={"تجديد"}
                         initialData={initialData}
-                        extraComponent={ExtraComponent}
+                        extraComponent={InstallmentComponent}
 
                   >
                       {children}

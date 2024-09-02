@@ -42,7 +42,8 @@ export default function ViewComponent({
                                           onModalOpen,
                                           formTitle,
                                           title,
-                                          extraComponent
+                                          extraComponent,
+                                          rerender
                                       }) {
     const [view, setView] = useState("table");
     const [showForm, setShowForm] = useState(directEdit);
@@ -109,6 +110,7 @@ export default function ViewComponent({
                           extraData={extraData}
                           handleEditBeforeSubmit={handleEditBeforeSubmit}
                           canEdit={canEdit}
+                          rerender={rerender}
                     >
                         {children}
                     </EditTableModal>

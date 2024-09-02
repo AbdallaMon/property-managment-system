@@ -8,7 +8,7 @@ import {rentAgreementInputs} from "../rentInputs";
 import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
 import {submitRentAgreement} from "@/services/client/createRentAgreement";
 import {RenewRentModal} from "@/app/UiComponents/Modals/RenewRent"; // Import the RenewRentModal
-import {Box, Button, FormControl, Select, Typography} from "@mui/material";
+import {Alert, Box, Button, FormControl, Select, Snackbar, Typography} from "@mui/material";
 import Link from "next/link";
 import {StatusType} from "@/app/constants/Enums";
 import MenuItem from "@mui/material/MenuItem";
@@ -16,6 +16,7 @@ import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
 import DeleteBtn from "@/app/UiComponents/Buttons/DeleteBtn";
 import dayjs from "dayjs"; // Import the CancelRentModal
 import "dayjs/locale/en-gb";
+import {InstallmentComponent} from "@/app/components/InstallmentComponent";
 
 export default function PropertyPage({searchParams}) {
     const propertyId = searchParams?.propertyId;
@@ -82,6 +83,7 @@ const RentWrapper = ({propperty}) => {
     });
     const [renewModalOpen, setRenewModalOpen] = useState(false);
     const [renewData, setRenewData] = useState(null);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
 
     async function getRenters() {
         const res = await fetch("/api/fast-handler?id=renter");
@@ -353,8 +355,22 @@ const RentWrapper = ({propperty}) => {
             ),
         },
     ];
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
+    };
+    const validateTotalPrice = (data) => {
+        const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
+
+        const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
+
+        return totalInstallmentAmount === discountedTotalPrice;
+    };
 
     async function submit(data) {
+        if (!validateTotalPrice(data)) {
+            setSnackbarOpen(true);
+            return;
+        }
         return await submitRentAgreement(data, setSubmitLoading);
     }
 
@@ -421,6 +437,8 @@ const RentWrapper = ({propperty}) => {
                     noTabs={true}
                     url={"main/rentAgreements"}
                     title={"عقود ايجار ملغيه"}
+                    extraComponent={InstallmentComponent}
+
               />
               <RenewRentModal
                     open={renewModalOpen}
@@ -429,6 +447,15 @@ const RentWrapper = ({propperty}) => {
                     inputs={dataInputs}
                     onSubmit={handleRenewSubmit}
               ></RenewRentModal>
+              <Snackbar
+                    open={snackbarOpen}
+                    autoHideDuration={6000}
+                    onClose={handleSnackbarClose}
+              >
+                  <Alert onClose={handleSnackbarClose} severity="error">
+                      المجموع الكلي للأقساط لا يتطابق مع السعر الكلي. يرجى التحقق من المدخلات.
+                  </Alert>
+              </Snackbar>
           </>
     );
 };
