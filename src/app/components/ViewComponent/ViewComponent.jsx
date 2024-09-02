@@ -42,6 +42,7 @@ export default function ViewComponent({
                                           onModalOpen,
                                           formTitle,
                                           title,
+                                          extraComponent
                                       }) {
     const [view, setView] = useState("table");
     const [showForm, setShowForm] = useState(directEdit);
@@ -120,7 +121,7 @@ export default function ViewComponent({
                                     color="primary"
                                     onClick={handleOpenCreateModal} // Open the create form modal
                               >
-                                  {showForm ? "إخفاء النموذج" : " اتشاء"}
+                                  {showForm ? "إخفاء النموذج" : " انشاء"}
                               </Button>
                         )}
                         <Button
@@ -179,6 +180,7 @@ export default function ViewComponent({
                             handleCloseCreateModal();
                         }
                     }}
+                    extraComponent={extraComponent}
                     disabled={disabled}
                     createModalsData={createModalsData}
                     reFetch={reFetch}

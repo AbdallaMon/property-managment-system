@@ -476,7 +476,6 @@ const PropertyWrapper = ({urlId}) => {
                                         </div>}
                               </>
                         )}
-
                         <Modal open={editModalOpen} onClose={handleCloseEditModal}>
                             <Box
                                   sx={{

@@ -1,8 +1,9 @@
 import React from 'react';
 import {Box, Card, CardContent, CardHeader, CircularProgress, Typography} from '@mui/material';
 import {Pie} from 'react-chartjs-2';
+import Link from "next/link";
 
-const CardComponent = ({headers, values, loading, chartData}) => (
+const CardComponent = ({headers, values, loading, chartData, href, hrefIndex}) => (
       <Card
             sx={{
                 height: "100%",
@@ -61,15 +62,33 @@ const CardComponent = ({headers, values, loading, chartData}) => (
                         <CircularProgress/>
                   ) : (
                         values.map((value, index) => (
-                              <Typography key={index} variant="h5" sx={{
-                                  flex: 1,
-                                  textAlign: 'center',
-                                  borderRight: index < values.length - 1 ? '1px solid #ccc' : 'none',
-                                  p: "16px 0",
-                                  borderBottom: '1px solid #ccc'
-                              }}>
-                                  {value}
-                              </Typography>
+                              <>
+                                  {href && hrefIndex === index ?
+                                        <Typography key={index} variant="h5" sx={{
+                                            flex: 1,
+                                            textAlign: 'center',
+                                            borderRight: index < values.length - 1 ? '1px solid #ccc' : 'none',
+                                            p: "16px 0",
+                                            borderBottom: '1px solid #ccc',
+                                            color: "#03a9f4",
+                                            textDecoration: "underline"
+                                        }}>
+                                            <Link href={href}>
+                                                {value}
+                                            </Link>
+                                        </Typography>
+                                        :
+                                        <Typography key={index} variant="h5" sx={{
+                                            flex: 1,
+                                            textAlign: 'center',
+                                            borderRight: index < values.length - 1 ? '1px solid #ccc' : 'none',
+                                            p: "16px 0",
+                                            borderBottom: '1px solid #ccc'
+                                        }}>
+                                            {value}
+                                        </Typography>
+                                  }
+                              </>
                         ))
                   )}
               </Box>

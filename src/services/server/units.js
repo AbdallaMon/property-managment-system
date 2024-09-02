@@ -56,6 +56,10 @@ export async function createUnit(data) {
 
 export async function getUnits(page, limit, searchParams) {
     const propertyId = searchParams.get("propertyId");
+    const filters = searchParams.get("filters")
+          ? JSON.parse(searchParams.get("filters"))
+          : {};
+    const {rentStatus} = filters;
     let where = {};
     if (propertyId && propertyId !== "all") {
         where = {
@@ -64,6 +68,34 @@ export async function getUnits(page, limit, searchParams) {
     }
     if (!propertyId || propertyId === "all") {
         where = await updateWhereClauseWithUserProperties("propertyId", where)
+    }
+    if (rentStatus && rentStatus !== "all") {
+        if (rentStatus === "rented") {
+            where.rentAgreements = {
+                some: {
+                    status: {
+                        not: "CANCELED",
+                    },
+                },
+            };
+        } else if (rentStatus === "notRented") {
+            where.OR = [
+                {
+                    rentAgreements: {
+                        none: {},
+                    },
+                },
+                {
+                    rentAgreements: {
+                        none: {
+                            status: {
+                                in: ["ACTIVE", "EXPIRED"],
+                            },
+                        },
+                    },
+                },
+            ];
+        }
     }
     const offset = (page - 1) * limit;
     const units = await prisma.unit.findMany({

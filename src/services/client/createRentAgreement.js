@@ -16,12 +16,12 @@ export async function submitRentAgreement(
       method,
       others,
       cancel,
+      dontCheck
 ) {
-    if (!data.canceling) {
+    if (!data.canceling && !dontCheck) {
         let startDate = new Date(data.startDate);
         let endDate = new Date(data.endDate);
 
-        // Check if start date is the first day of the month
         const isStartDateFirstDay = startDate.getDate() === 1;
 
         const nextDay = new Date(endDate);
@@ -71,7 +71,8 @@ export async function submitRentAgreement(
     if (cancel) {
         return;
     }
-
+    const installments = data.installments
+    delete data.installments
     const rentAgreementResponse = await handleRequestSubmit(
           data,
           setLoading,
@@ -86,7 +87,7 @@ export async function submitRentAgreement(
     const rentAgreementId = rentAgreementResponse.data.id;
 
     // Create Installments and Invoices
-    const installmentsData = {...rentAgreementResponse.data, rentAgreementId};
+    const installmentsData = {...rentAgreementResponse.data, rentAgreementId, installments};
     await handleRequestSubmit(
           installmentsData,
           setLoading,

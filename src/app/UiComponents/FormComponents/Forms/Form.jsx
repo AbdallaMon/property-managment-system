@@ -8,7 +8,7 @@ import {MuiSelect} from "@/app/UiComponents/FormComponents/MUIInputs/MuiSelect";
 import {MuiDatePicker} from "@/app/UiComponents/FormComponents/MUIInputs/MuiDatePicker";
 import MuiFileField from "@/app/UiComponents/FormComponents/MUIInputs/MuiFileField";
 import MuiSwitchField from "@/app/UiComponents/FormComponents/MUIInputs/MuiSwitchField";
-import {useRef} from "react";
+import {useEffect, useRef} from "react";
 import SimpleSelect from "@/app/UiComponents/FormComponents/MUIInputs/SimpleSelect";
 
 const locales = ["en-gb"];
@@ -27,7 +27,9 @@ export function Form({
                          disabled,
                          reFetch,
                          removeButton = false
+                         , extraComponent
                      }) {
+    const ExtraComponent = extraComponent;
     const {
         formState,
         register,
@@ -39,6 +41,10 @@ export function Form({
     } = useForm();
     const {errors} = formState;
     const formRef = useRef();
+    const formData = watch();
+    useEffect(() => {
+        console.log(formData, "from form")
+    }, [formData])
     return (
           <Box
                 className="bg-white  rounded shadow-md my-4"
@@ -170,6 +176,12 @@ export function Form({
                               }
                           })}
                           {children}
+                      </div>
+                      <div>
+                          {ExtraComponent &&
+                                <ExtraComponent data={formData} control={control} register={register} errors={errors}
+                                                setValue={setValue}/>
+                          }
                       </div>
                       {differentButton ? (
                             differentButton

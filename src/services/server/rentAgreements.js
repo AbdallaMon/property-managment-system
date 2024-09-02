@@ -370,41 +370,36 @@ export async function createRentAgreement(data) {
 
 export async function createInstallmentsAndPayments(rentAgreement) {
     try {
-        const {rentCollectionType, startDate, endDate} = rentAgreement;
+        const {rentCollectionType, startDate, endDate, installments} = rentAgreement;
 
         const start = new Date(startDate);
-        const end = new Date(endDate);
-        const monthDifference =
-              (end.getFullYear() - start.getFullYear()) * 12 +
-              end.getMonth() -
-              start.getMonth();
-
-        const totalInstallments = Math.ceil(
-              monthDifference / RentCollectionType[rentCollectionType],
-        );
-        const installmentBaseAmount = rentAgreement.totalPrice / totalInstallments;
-        let remainingAmount = rentAgreement.totalPrice;
-
-        const installments = Array(totalInstallments)
-              .fill()
+        // const end = new Date(endDate);
+        // const monthDifference =
+        //       (end.getFullYear() - start.getFullYear()) * 12 +
+        //       end.getMonth() -
+        //       start.getMonth();
+        //
+        // const totalInstallments = Math.ceil(
+        //       monthDifference / RentCollectionType[rentCollectionType],
+        // );
+        // const installmentBaseAmount = rentAgreement.totalPrice / totalInstallments;
+        // let remainingAmount = rentAgreement.totalPrice;
+        //
+        const installmentsData = installments
               .map((_, i) => {
-                  let dueDate = new Date(start);
-                  dueDate.setMonth(
-                        start.getMonth() + i * RentCollectionType[rentCollectionType],
-                  );
-
+                  let dueDate = new Date(installments[i].dueDate);
                   const endDate = new Date(dueDate);
                   endDate.setMonth(
                         dueDate.getMonth() + RentCollectionType[rentCollectionType],
                   );
 
-                  let installmentAmount;
-                  if (i === totalInstallments - 1) {
-                      installmentAmount = remainingAmount;
-                  } else {
-                      installmentAmount = Math.round(installmentBaseAmount / 50) * 50;
-                      remainingAmount -= installmentAmount;
-                  }
+                  // let installmentAmount
+                  // if (i === totalInstallments - 1) {
+                  //     installmentAmount = remainingAmount;
+                  // } else {
+                  //     installmentAmount = Math.round(installmentBaseAmount / 50) * 50;
+                  //     remainingAmount -= installmentAmount;
+                  // }
 
                   return {
                       startDate: convertToISO(start),
@@ -412,14 +407,14 @@ export async function createInstallmentsAndPayments(rentAgreement) {
                       endDate: convertToISO(endDate),
                       status: false,
                       rentAgreementId: rentAgreement.id,
-                      amount: installmentAmount,
+                      amount: installments[i].amount,
                   };
               });
 
-        for (let i = 0; i < installments.length; i++) {
-            const installment = installments[i];
+        for (let i = 0; i < installmentsData.length; i++) {
+            const installment = installmentsData[i];
             const dueDate = new Date(installment.dueDate);
-            const amount = installment.amount;
+            const amount = +installment.amount;
             delete installment.dueDate;
             delete installment.amount;
 

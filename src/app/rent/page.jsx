@@ -9,13 +9,38 @@ import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
 import {submitRentAgreement} from "@/services/client/createRentAgreement";
 import {RenewRentModal} from "@/app/UiComponents/Modals/RenewRent";
 import {CancelRentModal} from "@/app/UiComponents/Modals/CancelRentModal";
-import {Box, Button, FormControl, Select, Typography} from "@mui/material";
+import {Alert, Box, Button, FormControl, Select, Snackbar, TextField, Typography} from "@mui/material";
 import Link from "next/link";
 import {StatusType} from "@/app/constants/Enums";
 import MenuItem from "@mui/material/MenuItem";
 import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
+import {Controller} from "react-hook-form";
+import {DatePicker} from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import "dayjs/locale/en-gb";
+import {useAuth} from "@/app/context/AuthProvider/AuthProvider";
+import {usePathname} from "next/navigation";
+import {getCurrentPrivilege} from "@/helpers/functions/getUserPrivilege";
+
+async function getRentCollectionType() {
+    const data = [
+        {id: "TWO_MONTHS", name: "شهرين"},
+        {id: "THREE_MONTHS", name: "ثلاثة أشهر"},
+        {id: "FOUR_MONTHS", name: "أربعة أشهر"},
+        {id: "SIX_MONTHS", name: "ستة أشهر"},
+        {id: "ONE_YEAR", name: "سنة واحدة"},
+    ];
+    return {data};
+}
+
+const RentCollectionType = {
+    TWO_MONTHS: 2,
+    THREE_MONTHS: 3,
+    FOUR_MONTHS: 4,
+    SIX_MONTHS: 6,
+    ONE_YEAR: 12,
+};
+
 
 export default function RentPage({searchParams}) {
     const propertyId = searchParams?.propertyId;
@@ -65,6 +90,16 @@ const RentWrapper = ({propperty}) => {
     const [propertyId, setPropertyId] = useState(null);
     const [properties, setProperties] = useState([]);
     const [loadingProperty, setLoadingProperty] = useState(true);
+    const {user} = useAuth();
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+    const pathName = usePathname();
+
+    function canEdit() {
+        const currentPrivilege = getCurrentPrivilege(user, pathName);
+        return currentPrivilege?.privilege.canEdit;
+    }
+
     useEffect(() => {
         async function getD() {
             setLoadingProperty(true);
@@ -128,16 +163,6 @@ const RentWrapper = ({propperty}) => {
         return {data: dataWithLabel, id: propertyId};
     }
 
-    async function getRentCollectionType() {
-        const data = [
-            {id: "TWO_MONTHS", name: "شهرين"},
-            {id: "THREE_MONTHS", name: "ثلاثة أشهر"},
-            {id: "FOUR_MONTHS", name: "أربعة أشهر"},
-            {id: "SIX_MONTHS", name: "ستة أشهر"},
-            {id: "ONE_YEAR", name: "سنة واحدة"},
-        ];
-        return {data};
-    }
 
     const dataInputs = rentAgreementInputs.map((input) => {
         switch (input.data.id) {
@@ -251,6 +276,7 @@ const RentWrapper = ({propperty}) => {
                   },
               ],
         );
+
         if (!returedData) return;
         setData((old) =>
               [...old, returedData].map((item) => {
@@ -385,39 +411,57 @@ const RentWrapper = ({propperty}) => {
             printable: false,
             renderCell: (params) => (
                   <>
-                      <Button
-                            variant="contained"
-                            color="primary"
-                            sx={{
-                                mt: 1,
-                                mr: 1,
-                            }}
-                            onClick={() => handleOpenRenewModal(params.row)}
-                      >
-                          تجديد
-                      </Button>
-                      {params.row.status === "ACTIVE" && (
+                      {canEdit() &&
                             <>
                                 <Button
                                       variant="contained"
-                                      color="secondary"
+                                      color="primary"
                                       sx={{
                                           mt: 1,
                                           mr: 1,
                                       }}
-                                      onClick={() => handleOpenCancelModal(params.row)}
+                                      onClick={() => handleOpenRenewModal(params.row)}
                                 >
-                                    الغاء العقد
+                                    تجديد
                                 </Button>
+                                {params.row.status === "ACTIVE" && (
+                                      <>
+                                          <Button
+                                                variant="contained"
+                                                color="secondary"
+                                                sx={{
+                                                    mt: 1,
+                                                    mr: 1,
+                                                }}
+                                                onClick={() => handleOpenCancelModal(params.row)}
+                                          >
+                                              الغاء العقد
+                                          </Button>
+                                      </>
+                                )}
                             </>
-                      )}
+                      }
                   </>
             ),
         },
     ];
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
+    };
+    const validateTotalPrice = (data) => {
+        const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
+
+        const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
+
+        return totalInstallmentAmount === discountedTotalPrice;
+    };
 
     async function submit(data) {
-        return await submitRentAgreement(data, setSubmitLoading);
+        if (!validateTotalPrice(data)) {
+            setSnackbarOpen(true);
+            return;
+        }
+        return await submitRentAgreement(data, setSubmitLoading, null, null, null, true);
     }
 
     function handlePropertyFilterChange(event) {
@@ -484,7 +528,10 @@ const RentWrapper = ({propperty}) => {
                     submitFunction={submit}
                     url={"main/rentAgreements"}
                     title={"عقود الايجار النشطة"}
+                    extraComponent={ExtraComponent}
+
               ></ViewComponent>
+
               <ViewComponent
                     inputs={dataInputs}
                     formTitle={"عقد ايجار "}
@@ -508,14 +555,23 @@ const RentWrapper = ({propperty}) => {
                     url={"main/expiredRentAgreements"}
                     title={"عقود ايجار بحاجة الي اتخاذ اجراء معها"}
               />
-
+              <Snackbar
+                    open={snackbarOpen}
+                    autoHideDuration={6000}
+                    onClose={handleSnackbarClose}
+              >
+                  <Alert onClose={handleSnackbarClose} severity="error">
+                      المجموع الكلي للأقساط لا يتطابق مع السعر الكلي. يرجى التحقق من المدخلات.
+                  </Alert>
+              </Snackbar>
               <RenewRentModal
                     open={renewModalOpen}
                     handleClose={handleCloseRenewModal}
                     initialData={renewData}
                     inputs={dataInputs}
                     onSubmit={handleRenewSubmit}
-              ></RenewRentModal>
+              >
+              </RenewRentModal>
 
               <CancelRentModal
                     open={cancelModalOpen}
@@ -525,3 +581,141 @@ const RentWrapper = ({propperty}) => {
           </>
     );
 };
+
+
+export function ExtraComponent({data, control, register, errors, setValue, defaultInstallments}) {
+    let {rentCollectionType, startDate, endDate, totalPrice, discount} = data;
+    const [installments, setInstallments] = useState(defaultInstallments || []);
+    useEffect(() => {
+        if (defaultInstallments) {
+            setInstallments(defaultInstallments)
+        }
+    }, [defaultInstallments])
+    useEffect(() => {
+        if (rentCollectionType && startDate && endDate && totalPrice) {
+            calculateInstallments();
+        }
+    }, [rentCollectionType, startDate, endDate, totalPrice, discount]);
+
+    const calculateInstallments = () => {
+        const start = dayjs(startDate);
+        const end = dayjs(endDate);
+        const monthDifference =
+              end.diff(start, 'month') + 1;
+
+        const totalInstallments = Math.ceil(
+              monthDifference / RentCollectionType[rentCollectionType]
+        );
+        totalPrice = totalPrice - (discount || 0);
+        const installmentBaseAmount = totalPrice / totalInstallments;
+        let remainingAmount = totalPrice;
+
+        const newInstallments = Array(totalInstallments)
+              .fill()
+              .map((_, i) => {
+                  let dueDate = start.add(i * RentCollectionType[rentCollectionType], 'month');
+                  let endDate = dueDate.add(RentCollectionType[rentCollectionType], 'month');
+
+                  let installmentAmount;
+                  if (i === totalInstallments - 1) {
+                      installmentAmount = remainingAmount;
+                  } else {
+                      installmentAmount = Math.round(installmentBaseAmount / 50) * 50;
+                      remainingAmount -= installmentAmount;
+                  }
+
+                  // Update the form values using setValue from react-hook-form
+                  setValue(`installments[${i}].dueDate`, dueDate.format("YYYY-MM-DD"));
+                  setValue(`installments[${i}].amount`, installmentAmount);
+
+                  return {
+                      startDate: start.format("YYYY-MM-DD"),
+                      dueDate: dueDate.format("YYYY-MM-DD"),
+                      endDate: endDate.format("YYYY-MM-DD"),
+                      amount: installmentAmount,
+                  };
+              });
+
+        setInstallments(newInstallments);
+    };
+
+    return (
+          <Box>
+              {installments.map((installment, index) => (
+                    <Box key={index} mb={2} p={2} border={1} borderRadius={2} borderColor="grey.300">
+                        <Typography variant="h6">القسط {index + 1}</Typography>
+
+                        <FormControl
+                              fullWidth
+                              error={!!errors[`installments[${index}].dueDate`]}
+                              sx={{
+                                  width: {
+                                      xs: "100%",
+                                      md: "48%",
+                                  },
+                                  mr: "auto",
+                              }}
+                        >
+                            <Controller
+                                  name={`installments[${index}].dueDate`}
+                                  control={control}
+                                  defaultValue={installment.dueDate ? dayjs(installment.dueDate) : null}
+                                  rules={{
+                                      required: {
+                                          value: true,
+                                          message: "يرجى إدخال تاريخ الاستحقاق",
+                                      },
+                                  }}
+                                  render={({field: {onChange, value}, fieldState: {error}}) => (
+                                        <DatePicker
+                                              id={`installments[${index}].dueDate`}
+                                              label="تاريخ الاستحقاق"
+                                              value={value ? dayjs(value) : null}
+                                              onChange={(date) => {
+                                                  onChange(date ? date.format("YYYY-MM-DD") : null);
+                                              }}
+                                              renderInput={(params) => (
+                                                    <TextField
+                                                          {...params}
+                                                          error={!!error}
+                                                          helperText={error ? error.message : ""}
+                                                          placeholder="DD/MM/YYYY"
+                                                    />
+                                              )}
+                                        />
+                                  )}
+                            />
+                        </FormControl>
+
+                        <TextField
+                              fullWidth
+                              sx={{
+                                  width: {
+                                      xs: "100%",
+                                      md: "48%",
+                                  },
+                                  mr: "auto",
+                              }}
+                              id={`installments[${index}].amount`}
+                              label="المبلغ"
+                              type="number"
+                              variant="outlined"
+                              defaultValue={installment.amount}
+                              {...register(`installments[${index}].amount`, {
+                                  required: {
+                                      value: true,
+                                      message: "يرجى إدخال المبلغ",
+                                  },
+                                  min: {
+                                      value: 1,
+                                      message: "المبلغ يجب أن يكون أكبر من 0",
+                                  },
+                              })}
+                              error={!!errors[`installments[${index}].amount`]}
+                              helperText={errors[`installments[${index}].amount`] ? errors[`installments[${index}].amount`].message : ""}
+                        />
+                    </Box>
+              ))}
+          </Box>
+    );
+}

@@ -339,6 +339,8 @@ const Dashboard = () => {
                                     values={[units.total, units.rented, units.nonRented]}
                                     loading={loadingUnits}
                                     chartData={unitsChartData}
+                                    href={"/units?rentStatus=notRented"}
+                                    hrefIndex={2}
                               />
                           </Grid>
                           <Grid item xs={12}>
