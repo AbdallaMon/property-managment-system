@@ -185,7 +185,6 @@ const RentWrapper = ({propperty}) => {
         }
     });
 
-
     const handleOpenRenewModal = (rentData) => {
         setRenewData(rentData);
         setRenewModalOpen(true);
@@ -240,7 +239,6 @@ const RentWrapper = ({propperty}) => {
     };
     const validateTotalPrice = (data) => {
         const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
-
         const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
 
         return totalInstallmentAmount === discountedTotalPrice;
@@ -275,6 +273,7 @@ const RentWrapper = ({propperty}) => {
                       message: "جاري تحديث حالة العقد القديم...",
                   },
               ],
+              null, true
         );
         const newData = data.filter((item) => +item.id !== +renewData.id)
         setData(newData);
@@ -517,7 +516,6 @@ const RentWrapper = ({propperty}) => {
                     extraComponent={InstallmentComponent}
                     rerender={rerender}
               ></ViewComponent>
-
               <ViewComponent
                     inputs={dataInputs}
                     formTitle={"عقد ايجار "}

@@ -17,9 +17,13 @@ export function InstallmentComponent({getValues, control, register, errors, setV
     const [dataState, setData] = useState(data)
     let {rentCollectionType, startDate, endDate, totalPrice, discount} = dataState;
     const [installments, setInstallments] = useState([]);
+
     useEffect(() => {
         if (getValues()) {
-            setData(getValues())
+            window.setTimeout(() => {
+
+                setData(getValues())
+            }, 100)
         }
     }, [getValues])
     useEffect(() => {
@@ -27,6 +31,10 @@ export function InstallmentComponent({getValues, control, register, errors, setV
             setData(data)
         }
     }, [data])
+    useEffect(() => {
+        setValue("installments", installments);
+    }, [installments]);
+
     useEffect(() => {
         if (rentCollectionType && startDate && endDate && totalPrice) {
             calculateInstallments();
@@ -36,8 +44,8 @@ export function InstallmentComponent({getValues, control, register, errors, setV
     const calculateInstallments = () => {
         const start = dayjs(startDate);
         const end = dayjs(endDate);
-        const monthDifference =
-              end.diff(start, 'month') + 1;
+
+        const monthDifference = end.startOf('month').diff(start.startOf('month'), 'month');
 
         const totalInstallments = Math.ceil(
               monthDifference / RentCollectionType[rentCollectionType]
@@ -60,8 +68,6 @@ export function InstallmentComponent({getValues, control, register, errors, setV
                       installmentAmount = Math.round(installmentBaseAmount / 50) * 50;
                       remainingAmount -= installmentAmount;
                   }
-
-                  // Update the form values using setValue from react-hook-form
                   setValue(`installments[${i}].dueDate`, dueDate.format("YYYY-MM-DD"));
                   setValue(`installments[${i}].amount`, installmentAmount);
 

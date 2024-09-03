@@ -51,14 +51,17 @@ export function EditTableModal({
             setExtraData(data[extraDataName]);
         }
     }, [extraDataName]);
-    const modalInputs =
-          data &&
-          inputs?.map((input) => {
-              return {
-                  ...input,
-                  value: data[input.data.id],
-              };
-          });
+    let modalInputs = inputs.map((input) => {
+        return {
+            ...input,
+            data: {
+                ...input.data,
+            },
+            value: data ? data[input.data.id] : input.value,
+        };
+    });
+
+
     const modelStyle = modalStyle(fullWidth);
     return (
           <Modal open={openModal} onClose={() => setOpenModal(false)}>

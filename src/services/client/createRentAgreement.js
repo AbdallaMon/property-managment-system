@@ -1,6 +1,4 @@
 import {handleRequestSubmit} from "@/helpers/functions/handleRequestSubmit";
-import {toast} from "react-toastify";
-import {Failed, Success} from "@/app/components/loading/ToastUpdate";
 
 const PayEveryMonths = {
     TWO_MONTHS: 2,
@@ -18,42 +16,42 @@ export async function submitRentAgreement(
       cancel,
       dontCheck
 ) {
-    if (!data.canceling && !dontCheck) {
-        let startDate = new Date(data.startDate);
-        let endDate = new Date(data.endDate);
-
-        const isStartDateFirstDay = startDate.getDate() === 1;
-
-        const nextDay = new Date(endDate);
-        nextDay.setDate(endDate.getDate() + 1);
-        const nextMonth = endDate.getMonth() === 11 ? 0 : endDate.getMonth() + 1;
-
-        const isEndDateLastDay = nextDay.getDate() === 1 && nextDay.getMonth() === nextMonth;
-
-        if (isStartDateFirstDay && isEndDateLastDay) {
-            endDate = nextDay;
-        }
-
-        const monthDifference =
-              (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-              (endDate.getMonth() - startDate.getMonth());
-
-        const id = toast.loading("يتم مراجعة البيانات...");
-        if (
-              monthDifference % PayEveryMonths[data.rentCollectionType] !== 0 ||
-              monthDifference < 1
-        ) {
-            toast.update(
-                  id,
-                  Failed("الرجاء التأكد من تاريخ البداية والنهاية والتكرار المختار "),
-            );
-            return null;
-        } else {
-            toast.update(id, Success("تم مراجعة البيانات بنجاح"));
-        }
-
-
-    }
+    // if (!data.canceling && !dontCheck) {
+    //     let startDate = new Date(data.startDate);
+    //     let endDate = new Date(data.endDate);
+    //
+    //     const isStartDateFirstDay = startDate.getDate() === 1;
+    //
+    //     const nextDay = new Date(endDate);
+    //     nextDay.setDate(endDate.getDate() + 1);
+    //     const nextMonth = endDate.getMonth() === 11 ? 0 : endDate.getMonth() + 1;
+    //
+    //     const isEndDateLastDay = nextDay.getDate() === 1 && nextDay.getMonth() === nextMonth;
+    //
+    //     if (isStartDateFirstDay && isEndDateLastDay) {
+    //         endDate = nextDay;
+    //     }
+    //
+    //     const monthDifference =
+    //           (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+    //           (endDate.getMonth() - startDate.getMonth());
+    //
+    //     const id = toast.loading("يتم مراجعة البيانات...");
+    //     if (
+    //           monthDifference % PayEveryMonths[data.rentCollectionType] !== 0 ||
+    //           monthDifference < 1
+    //     ) {
+    //         toast.update(
+    //               id,
+    //               Failed("الرجاء التأكد من تاريخ البداية والنهاية والتكرار المختار "),
+    //         );
+    //         return null;
+    //     } else {
+    //         toast.update(id, Success("تم مراجعة البيانات بنجاح"));
+    //     }
+    //
+    //
+    // }
 
     if (method === "PUT") {
         for (const req of others) {
@@ -73,6 +71,7 @@ export async function submitRentAgreement(
     }
     const installments = data.installments
     delete data.installments
+
     const rentAgreementResponse = await handleRequestSubmit(
           data,
           setLoading,
@@ -108,7 +107,7 @@ export async function submitRentAgreement(
           "جاري إنشاء رسوم العقود...",
     );
 
-    if (!data.extraData.otherExpenses || data.extraData.otherExpenses?.length < 1)
+    if (!data.extraData || !data.extraData.otherExpenses || data.extraData.otherExpenses?.length < 1)
         return rentAgreementResponse.data;
 
     const otherExpensesData = {

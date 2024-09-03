@@ -1,6 +1,6 @@
 "use client";
 import TableFormProvider, {useTableForm,} from "@/app/context/TableFormProvider/TableFormProvider";
-import {Box, Button, FormControl, Select, Typography} from "@mui/material";
+import {Alert, Box, Button, FormControl, Modal, Select, Snackbar, Typography} from "@mui/material";
 import {useDataFetcher} from "@/helpers/hooks/useDataFetcher";
 import ViewComponent from "@/app/components/ViewComponent/ViewComponent";
 import {useEffect, useState} from "react";
@@ -11,6 +11,12 @@ import DeleteBtn from "@/app/UiComponents/Buttons/DeleteBtn";
 import {formatCurrencyAED} from "@/helpers/functions/convertMoneyToArabic";
 import MenuItem from "@mui/material/MenuItem";
 import {useRouter, useSearchParams} from "next/navigation";
+import {rentAgreementInputs} from "@/app/rent/rentInputs";
+import {submitRentAgreement} from "@/services/client/createRentAgreement";
+import {useToastContext} from "@/app/context/ToastLoading/ToastLoadingProvider";
+import {simpleModalStyle} from "@/app/constants/constants";
+import {Form} from "@/app/UiComponents/FormComponents/Forms/Form";
+import {InstallmentComponent} from "@/app/components/InstallmentComponent";
 
 export default function PropertyPage() {
     return (
@@ -29,6 +35,10 @@ const PropertyWrapper = () => {
     const searchParams = useSearchParams();
     const rentStatusParam = searchParams.get("rentStatus")
     const [rentStatus, setRentStatus] = useState(rentStatusParam || "all")
+    const [unit, setUnit] = useState(null)
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [openRentModal, setOpenRentModal] = useState(false)
+
     const {
         data,
         loading,
@@ -44,6 +54,7 @@ const PropertyWrapper = () => {
         setOthers, others,
         setFilters
     } = useDataFetcher("main/units", null, {rentStatus: rentStatusParam});
+    const {setLoading: setSubmitLoading} = useToastContext()
     const router = useRouter()
     useEffect(() => {
         async function fetchProperties() {
@@ -88,6 +99,69 @@ const PropertyWrapper = () => {
         extraId: false,
         getData: getProperties,
     };
+
+    async function getRenters() {
+        const res = await fetch("/api/fast-handler?id=renter");
+        const data = await res.json();
+
+        return {data};
+    }
+
+
+    async function getRentCollectionType() {
+        const data = [
+            {id: "TWO_MONTHS", name: "شهرين"},
+            {id: "THREE_MONTHS", name: "ثلاثة أشهر"},
+            {id: "FOUR_MONTHS", name: "أربعة أشهر"},
+            {id: "SIX_MONTHS", name: "ستة أشهر"},
+            {id: "ONE_YEAR", name: "سنة واحدة"},
+        ];
+        return {data};
+    }
+
+    async function getUnits() {
+        const res = await fetch(
+              "/api/fast-handler?id=unit&propertyId=" + propertyId,
+        );
+        const data = await res.json();
+        const dataWithLabel = data.map((item) => {
+            return {
+                ...item,
+                name: item.number,
+                disabled: item.rentAgreements?.some((rent) => rent.status === "ACTIVE"),
+            };
+        });
+
+        return {data: dataWithLabel, id: propertyId};
+    }
+
+    const rentInputs = rentAgreementInputs.map((input) => {
+        switch (input.data.id) {
+            case "rentCollectionType":
+                return {
+                    ...input,
+                    extraId: false,
+                    getData: getRentCollectionType,
+                };
+            case "renterId":
+                return {
+                    ...input,
+                    extraId: false,
+                    getData: getRenters,
+                };
+
+            case "propertyId":
+                return {
+                    ...input,
+                };
+            case "unitId":
+                return {
+                    ...input,
+                };
+            default:
+                return input;
+        }
+    });
 
     async function handleDelete(id) {
         const res = await submitData(
@@ -181,9 +255,17 @@ const PropertyWrapper = () => {
             width: 250,
             printable: false,
             renderCell: (params) => (
-                  <>
+                  <div className={"flex items-center gap-2"}>
+                      {rentStatusParam === "notRented" &&
+                            <Button
+                                  variant="contained"
+                                  onClick={() => {
+                                      setUnit(params.row)
+                                      setOpenRentModal(true)
+                                  }}
+                            > انشاء عقد ايجار</Button>}
                       <DeleteBtn handleDelete={() => handleDelete(params.row.id)}/>
-                  </>
+                  </div>
             ),
         },
     ];
@@ -196,6 +278,28 @@ const PropertyWrapper = () => {
         const rentStatus = event.target.value
         router.push(`?rentStatus=${rentStatus}`)
         setRentStatus(rentStatus)
+    }
+
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false);
+    };
+
+    const validateTotalPrice = (data) => {
+        const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
+        const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
+        return totalInstallmentAmount === discountedTotalPrice;
+    };
+
+    async function submitRent(formData) {
+        if (!validateTotalPrice(formData)) {
+            setSnackbarOpen(true);
+            return;
+        }
+        formData.propertyId = unit.propertyId;
+        formData.unitId = unit.id
+        await submitRentAgreement(formData, setSubmitLoading, null, null, null, true);
+        const newData = data.filter(oldUnit => oldUnit.id !== unit.id)
+        setData(newData)
     }
 
     return (
@@ -211,6 +315,15 @@ const PropertyWrapper = () => {
                         alignItems: "center",
                     }}
               >
+                  <Snackbar
+                        open={snackbarOpen}
+                        autoHideDuration={6000}
+                        onClose={handleSnackbarClose}
+                  >
+                      <Alert onClose={handleSnackbarClose} severity="error">
+                          المجموع الكلي للأقساط لا يتطابق مع السعر الكلي. يرجى التحقق من المدخلات.
+                      </Alert>
+                  </Snackbar>
                   <FormControl sx={{mb: 2, maxWidth: 300}}>
                       <Typography variant="h6">العقار </Typography>
                       <Select
@@ -247,6 +360,26 @@ const PropertyWrapper = () => {
                       </Select>
                   </FormControl>
               </Box>
+              {unit &&
+                    <RentModal
+                          openModal={openRentModal}
+                          data={{
+                              property: unit.property,
+                              propertyId: unit.property.id,
+                              unitId: unit.id,
+                              unitNumber: unit.unitId,
+                              ...unit,
+                          }
+                          }
+                          handleClose={() => {
+                              setOpenRentModal(false)
+                              setUnit(null)
+                          }}
+                          inputs={rentInputs}
+                          submit={submitRent}
+                    >
+                    </RentModal>
+              }
               <ViewComponent
                     inputs={unitInputs}
                     formTitle={" وحده جديده"}
@@ -270,3 +403,93 @@ const PropertyWrapper = () => {
           </>
     );
 };
+
+function RentModal({data, inputs, openModal, handleClose, canEdit = true, submit}) {
+    let modalInputs = inputs.map((input) => {
+        return {
+            ...input,
+            data: {
+                ...input.data,
+            },
+            value: data ? data[input.data.id] : input.value,
+        };
+    });
+    modalInputs[0] = {
+        data: {
+            id: "propertyId",
+            label: "العقار",
+            type: "text",
+            name: "propertyId",
+            disabled: true,
+        },
+        value: data?.property.name,
+        sx: {
+            width: {
+                xs: "100%",
+                sm: "48%",
+            },
+            mr: "auto",
+        },
+    };
+    modalInputs[1] = {
+        data: {
+            id: "unitNumber",
+            label: "رقم الوحدة",
+            type: "text",
+            disabled: true,
+        },
+        value: data?.number,
+        sx: {
+            width: {
+                xs: "100%",
+                sm: "48%",
+            },
+        },
+    };
+    modalInputs[modalInputs.length] = {
+        data: {
+            id: "unitId",
+            label: "الوحدة",
+            type: "text",
+            name: "unitId",
+        },
+        sx: {
+            width: {
+                xs: "100%",
+                sm: "48%",
+            },
+            display: "none",
+        },
+    };
+    return (
+          <Modal open={openModal} onClose={() => handleClose()}>
+              {canEdit ? (
+                    <Box sx={{...simpleModalStyle, minWidth: "60%"}}>
+                        <Form
+                              formTitle={"انشاء عقد ايجار"}
+                              inputs={modalInputs}
+                              onSubmit={async (data) => {
+                                  await submit(data)
+                              }}
+                              variant={"outlined"}
+                              btnText={"انشاء"}
+                              extraComponent={InstallmentComponent}
+
+                        >
+                        </Form>
+                    </Box>
+              ) : (
+                    <Box sx={simpleModalStyle}>
+                        <Typography
+                              variant={"h5"}
+                              align={"center"}
+                              color={"error"}
+                              sx={{fontWeight: "bold"}}
+                        >
+                            ليس لديك الصلاحية لتعديل هذا العنصر
+                        </Typography>
+                    </Box>
+              )}
+          </Modal>
+    );
+}

@@ -1,18 +1,18 @@
 "use client";
 import React, {useRef, useState} from "react";
 import {
-  Checkbox,
-  FormControlLabel,
-  IconButton,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Toolbar,
-  Tooltip,
+    Checkbox,
+    FormControlLabel,
+    IconButton,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Toolbar,
+    Tooltip,
 } from "@mui/material";
 import {useReactToPrint} from "react-to-print";
 import PrintIcon from "@mui/icons-material/Print";
@@ -40,6 +40,7 @@ export default function CustomTable({
               return acc;
           }, {}),
     );
+
 
     const handlePrint = useReactToPrint({
         content: () => componentRef.current,

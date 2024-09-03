@@ -94,7 +94,6 @@ export default function ViewComponent({
         onModalOpen && onModalOpen();
     };
     const handleCloseCreateModal = () => setCreateModalOpen(false);
-
     return (
           <div className="">
               {openModal && !noModal && (

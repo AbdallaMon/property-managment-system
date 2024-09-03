@@ -139,8 +139,7 @@ export const RenewRent = ({data, setData}) => {
         const discountedTotalPrice = parseFloat(data.totalPrice) - (parseFloat(data.discount) || 0);
 
         const totalInstallmentAmount = data.installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
-        console.log(totalInstallmentAmount, "totalInstallment")
-        console.log(discountedTotalPrice, "discounter")
+    
         return totalInstallmentAmount === discountedTotalPrice;
     };
 
@@ -223,9 +222,9 @@ export function RenewRentModal({
                                    inputs,
                                    onSubmit,
                                    children,
+                                   title = "تجديد"
                                }) {
     const [modalInputs, setModalInputs] = useState([]);
-
     useEffect(() => {
         function createInputs() {
             inputs[0] = {
@@ -248,12 +247,11 @@ export function RenewRentModal({
             inputs[1] = {
                 data: {
                     id: "unitNumber",
-                    label: "معرف الوحدة",
+                    label: " رقم الوحدة",
                     type: "text",
                     disabled: true,
                 },
-
-                value: initialData?.unit.unitId,
+                value: initialData?.unit.number,
                 sx: {
                     width: {
                         xs: "100%",
@@ -317,17 +315,16 @@ export function RenewRentModal({
                     }}
               >
                   <Typography variant="h6" component="h2">
-                      تجديد عقد الإيجار
+                      ${title} عقد الإيجار
                   </Typography>
                   <Form
                         formTitle={"تجديد عقد الإيجار"}
                         inputs={modalInputs}
                         onSubmit={onSubmit}
                         variant={"outlined"}
-                        btnText={"تجديد"}
+                        btnText={title}
                         initialData={initialData}
                         extraComponent={InstallmentComponent}
-
                   >
                       {children}
 

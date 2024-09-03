@@ -208,6 +208,8 @@ export const rentAgreementInputs = [
             type: "number",
             label: "رسوم التسجيل",
             name: "registrationFees",
+            defaultValue: 0,
+
         },
         pattern: {
             required: {
@@ -227,7 +229,8 @@ export const rentAgreementInputs = [
             id: "insuranceFees",
             type: "number",
             label: "رسوم التأمين",
-            name: "insuranceFees",
+            name: "insuranceFees", defaultValue: 0,
+
         },
         pattern: {
             required: {

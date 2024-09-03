@@ -11,10 +11,12 @@ const RentCollectionType = {
     ONE_YEAR: 12,
 };
 
-export async function getRentAgreements(page, limit, searchParams, params) {
+export async function getRentAgreements(_, limit, searchParams, params) {
+    const page = searchParams.get("?page")
     const offset = (page - 1) * limit;
     const whereClause = {};
     const propertyId = searchParams.get("propertyId");
+
     const rented = searchParams.get("rented");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -46,7 +48,6 @@ export async function getRentAgreements(page, limit, searchParams, params) {
         skip: offset,
         take: limit,
         where: whereClause,
-
         include: {
             renter: {
                 select: {
